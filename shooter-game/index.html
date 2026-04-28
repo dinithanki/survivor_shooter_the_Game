@@ -2,28 +2,52 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Survivor Game</title>
-
-    <style>
-      body {
-        margin: 0;
-        background: #0a0a0f;
-        overflow: hidden;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-      }
-
-      canvas {
-        background: #12131a;
-        border: 2px solid #334;
-      }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Survivor Shooter Game</title>
+    <link rel="stylesheet" href="/src/styles/game.css" />
   </head>
 
   <body>
-    <canvas id="game"></canvas>
+    <div class="game-container">
+      <canvas id="game"></canvas>
+
+      <div class="controls">
+        <div class="control-item">
+          <span class="key">W</span>
+          <span class="key">A</span>
+          <span class="key">S</span>
+          <span class="key">D</span>
+          <span>Move</span>
+        </div>
+        <div class="control-item">
+          <span class="key">SPACE</span>
+          <span>Shoot</span>
+        </div>
+        <div class="control-item">
+          <span class="key">P</span>
+          <span>Pause/Resume</span>
+        </div>
+        <div class="control-item">
+          <span class="key">R</span>
+          <span>Restart</span>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat-item">
+          <span class="stat-label">Current Game</span>
+          <span class="stat-value" id="score">Score: 0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Wave</span>
+          <span class="stat-value" id="wave">Wave: 1</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Health</span>
+          <span class="stat-value" id="health">100/100</span>
+        </div>
+      </div>
+    </div>
 
     <script type="module" src="/src/main.js"></script>
   </body>

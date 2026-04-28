@@ -1,0 +1,131 @@
+/* Game Styling */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Arial", sans-serif;
+  background: linear-gradient(135deg, #0a0a0f 0%, #16213e 100%);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  color: #fff;
+}
+
+#game {
+  background: #1a1a2e;
+  border: 3px solid #00d4ff;
+  box-shadow:
+    0 0 20px rgba(0, 212, 255, 0.5),
+    0 0 40px rgba(255, 0, 127, 0.3);
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+canvas {
+  display: block;
+  cursor: none;
+}
+
+/* Game container */
+.game-container {
+  position: relative;
+  max-width: 1000px;
+  width: 100%;
+}
+
+/* Stats display */
+.stats {
+  display: flex;
+  justify-content: space-around;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 8px;
+  margin-top: 20px;
+  gap: 20px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #888;
+  text-transform: uppercase;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: bold;
+  color: #00d4ff;
+}
+
+/* Controls display */
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 8px;
+  margin-top: 20px;
+  font-size: 14px;
+}
+
+.control-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.key {
+  background: #333;
+  border: 1px solid #666;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-weight: bold;
+  min-width: 40px;
+  text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  #game {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .controls {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .stats {
+    flex-direction: column;
+  }
+}
+
+/* Animations */
+@keyframes glow {
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(0, 212, 255, 0.8);
+  }
+}
+
+#game:hover {
+  animation: glow 1.5s ease-in-out infinite;
+}
