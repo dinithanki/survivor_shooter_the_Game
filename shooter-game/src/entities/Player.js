@@ -40,8 +40,16 @@ export default class Player {
       this.facingAngle = Math.atan2(dy, dx);
     }
 
-    this.x += dx * this.speed * dt;
-    this.y += dy * this.speed * dt;
+    const nextX = this.x + dx * this.speed * dt;
+    const nextY = this.y + dy * this.speed * dt;
+
+    if (this.canMoveTo(nextX, this.y)) {
+      this.x = nextX;
+    }
+
+    if (this.canMoveTo(this.x, nextY)) {
+      this.y = nextY;
+    }
 
     // Keep in bounds
     this.x = Math.max(
@@ -60,21 +68,44 @@ export default class Player {
     }
   }
 
+  applyDifficultyScaling(difficultyScale) {
+    this.maxHp = difficultyScale.playerMaxHp;
+    this.hp = Math.min(this.hp, this.maxHp);
+    this.shootRate = difficultyScale.playerShootRate;
+  }
+
   canShoot() {
     return this.shootCooldown <= 0;
+  }
+
+  canMoveTo(x, y) {
+    const halfWidth = this.width / 2 - 1;
+    const halfHeight = this.height / 2 - 1;
+    const points = [
+      [x - halfWidth, y - halfHeight],
+      [x + halfWidth, y - halfHeight],
+      [x - halfWidth, y + halfHeight],
+      [x + halfWidth, y + halfHeight],
+    ];
+
+    return points.every(([pointX, pointY]) =>
+      this.game.map.isWalkable(pointX, pointY),
+    );
   }
 
   updateShootCooldown(dt) {
     this.shootCooldown = Math.max(0, this.shootCooldown - dt);
   }
 
-  shoot() {
+  shoot(game = null) {
     const offsetX = Math.cos(this.facingAngle) * 18;
     const offsetY = Math.sin(this.facingAngle) * 18;
     const bullet = new Bullet(
       this.x + offsetX,
       this.y + offsetY,
       this.facingAngle,
+      "player",
+      game || this.game,
     );
     this.game.bullets.push(bullet);
     this.shootCooldown = this.shootRate;

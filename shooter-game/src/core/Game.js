@@ -45,6 +45,13 @@ export default class Game {
     this.score = 0;
     this.isPaused = false;
     this.isGameOver = false;
+    this.difficultyTier = -1;
+    this.difficultyScale = {
+      playerMaxHp: 100,
+      playerShootRate: 0.1,
+      enemyHpBonus: 0,
+      enemyShootRateMultiplier: 1,
+    };
 
     // Game systems
     this.collisionSystem = new CollisionSystem(this);
@@ -53,7 +60,9 @@ export default class Game {
     this.damageSystem = new DamageSystem(this);
 
     // Map and UI
-    this.map = null; // Disabled for now (performance)
+    // selected map preset (used when creating map / restarting)
+    this.selectedMapPreset = "cross";
+    this.map = new Map(this.width, this.height, this.selectedMapPreset);
     this.hud = new HUD(this);
     this.overlay = new Overlay(this);
     this.menu = new Menu(this);
@@ -93,6 +102,8 @@ export default class Game {
     }
 
     if (!this.isPaused) {
+      this.updateDifficultyScaling();
+
       // Update systems
       this.input.clearPressed();
       this.player.update(this.input, dt);
@@ -120,8 +131,8 @@ export default class Game {
     this.ctx.fillStyle = "#1a1a2e";
     this.ctx.fillRect(0, 0, this.width, this.height);
 
-    // Draw map (optional)
-    // if (this.map) this.map.draw(this.ctx);
+    // Draw map
+    if (this.map) this.map.draw(this.ctx);
 
     // Draw game entities
     this.enemies.forEach((e) => e.draw(this.ctx));
@@ -164,10 +175,51 @@ export default class Game {
     this.score = 0;
     this.isPaused = false;
     this.isGameOver = false;
+    this.difficultyTier = -1;
+    this.difficultyScale = {
+      playerMaxHp: 100,
+      playerShootRate: 0.1,
+      enemyHpBonus: 0,
+      enemyShootRateMultiplier: 1,
+    };
+
+    // Recreate map with selected preset
+    this.map = new Map(this.width, this.height, this.selectedMapPreset);
 
     // Reset systems
     this.waveSystem = new WaveSystem(this);
     this.waveSystem.startWave();
+  }
+
+  updateDifficultyScaling() {
+    const tier = Math.floor(this.score / 100);
+    if (tier === this.difficultyTier) {
+      return;
+    }
+
+    this.difficultyTier = tier;
+
+    const playerMaxHp = 100 + tier * 10;
+    const playerShootRate = Math.max(0.05, 0.1 - tier * 0.005);
+    const enemyHpBonus = tier;
+    const enemyShootRateMultiplier = Math.max(0.75, 1 - tier * 0.05);
+
+    this.difficultyScale = {
+      playerMaxHp,
+      playerShootRate,
+      enemyHpBonus,
+      enemyShootRateMultiplier,
+    };
+
+    this.player.maxHp = playerMaxHp;
+    this.player.hp = Math.min(playerMaxHp, this.player.hp + 5);
+    this.player.shootRate = playerShootRate;
+
+    for (const enemy of this.enemies) {
+      enemy.applyDifficultyScaling(this.difficultyScale);
+    }
+
+    this.waveSystem.applyDifficultyScaling(this.difficultyScale);
   }
 
   addParticles(x, y, count = 8) {

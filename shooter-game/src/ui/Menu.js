@@ -6,7 +6,14 @@ export default class Menu {
     this.game = game;
     this.isOpen = false;
     this.selectedOption = 0;
-    this.options = ["Resume", "Settings", "Quit"];
+    this.mapPresets = ["cross", "maze", "diamond", "grid", "spiral", "default"];
+    this.selectedMapIndex = 0;
+    this.options = [
+      "Resume",
+      `Map: ${this.mapPresets[this.selectedMapIndex]}`,
+      "Start Game",
+      "Quit",
+    ];
   }
 
   draw(ctx) {
@@ -58,6 +65,22 @@ export default class Menu {
     if (input.isKeyPressed("arrowdown")) {
       this.selectedOption = (this.selectedOption + 1) % this.options.length;
     }
+
+    // Left/right to change map when map option selected
+    if (this.selectedOption === 1) {
+      if (input.isKeyPressed("arrowleft")) {
+        this.selectedMapIndex =
+          (this.selectedMapIndex - 1 + this.mapPresets.length) %
+          this.mapPresets.length;
+        this.options[1] = `Map: ${this.mapPresets[this.selectedMapIndex]}`;
+      }
+      if (input.isKeyPressed("arrowright")) {
+        this.selectedMapIndex =
+          (this.selectedMapIndex + 1) % this.mapPresets.length;
+        this.options[1] = `Map: ${this.mapPresets[this.selectedMapIndex]}`;
+      }
+    }
+
     if (input.isKeyPressed("enter")) {
       this.selectOption();
     }
@@ -68,10 +91,14 @@ export default class Menu {
       case 0: // Resume
         this.close();
         break;
-      case 1: // Settings
-        console.log("Settings");
+      case 1: // Map selection (no-op on enter)
         break;
-      case 2: // Quit
+      case 2: // Start Game with selected map
+        this.game.selectedMapPreset = this.mapPresets[this.selectedMapIndex];
+        this.game.restart();
+        this.close();
+        break;
+      case 3: // Quit
         location.reload();
         break;
     }

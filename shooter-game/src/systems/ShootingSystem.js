@@ -22,7 +22,7 @@ export default class ShootingSystem {
   playerShoot(dt) {
     const player = this.game.player;
     if (player.canShoot()) {
-      player.shoot();
+      player.shoot(this.game);
     }
   }
 

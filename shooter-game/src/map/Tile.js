@@ -24,15 +24,5 @@ export default class Tile {
   draw(ctx) {
     ctx.fillStyle = this.color;
     ctx.fillRect(this.x * this.size, this.y * this.size, this.size, this.size);
-
-    // Grid
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(
-      this.x * this.size,
-      this.y * this.size,
-      this.size,
-      this.size,
-    );
   }
 }

@@ -2,102 +2,100 @@
  * Wave system - handles enemy spawning in waves
  */
 import Enemy from "../entities/Enemy.js";
-import { randomInt, randomChoice } from "../utils/random.js";
+import { randomInt } from "../utils/random.js";
 
 export default class WaveSystem {
   constructor(game) {
     this.game = game;
     this.currentWave = 0;
-    this.waveTimer = 0;
-    this.spawnTimer = 0;
-    this.enemiesSpawnedThisWave = 0;
     this.waveEnded = true;
-    this.isFirstWave = true;
-    this.waveDuration = 30; // seconds
+    this.initialEnemyCount = 12;
+    this.maxEnemiesAtOnce = this.initialEnemyCount;
   }
 
   update(dt) {
-    // First wave starts immediately with no delay
-    if (this.isFirstWave && this.waveEnded) {
-      this.startWave();
-      this.isFirstWave = false;
-      return;
-    }
-
-    if (this.waveEnded) {
-      this.waveTimer += dt;
-      if (this.waveTimer > 5) {
-        // 5 second break between waves
-        this.startWave();
-      }
-      return;
-    }
-
-    this.waveTimer += dt;
-    this.spawnTimer += dt;
-
-    // End wave after duration or no enemies left
-    if (this.waveTimer > this.waveDuration && this.game.enemies.length === 0) {
-      this.endWave();
-    }
-
-    // Spawn enemies
-    const spawnRate = Math.max(0.3, 1.5 - this.currentWave * 0.1);
-    if (this.spawnTimer > spawnRate) {
-      this.spawnEnemy();
-      this.spawnTimer = 0;
+    // Check if wave is complete (all enemies killed)
+    if (!this.waveEnded && this.game.enemies.length === 0) {
+      this.nextWave();
     }
   }
 
   startWave() {
-    this.currentWave++;
-    this.waveTimer = 0;
-    this.spawnTimer = 0;
-    this.enemiesSpawnedThisWave = 0;
+    this.currentWave = 1;
+    this.game.enemies = [];
+
+    const enemyCount = this.initialEnemyCount;
+    for (let i = 0; i < enemyCount; i++) {
+      this.spawnEnemy();
+    }
+
     this.waveEnded = false;
+  }
+
+  nextWave() {
+    this.currentWave++;
+    this.game.enemies = [];
+
+    const enemyCount =
+      this.initialEnemyCount + Math.floor((this.currentWave - 1) / 2);
+    for (let i = 0; i < enemyCount; i++) {
+      this.spawnEnemy();
+    }
+
+    this.waveEnded = false;
+  }
+
+  applyDifficultyScaling(difficultyScale) {
+    const tier = Math.max(0, Math.floor((this.game.score || 0) / 100));
+    this.maxEnemiesAtOnce = Math.min(
+      24,
+      this.initialEnemyCount + Math.floor(tier / 2),
+    );
   }
 
   endWave() {
     this.waveEnded = true;
-    this.waveTimer = 0;
   }
 
   spawnEnemy() {
-    const side = randomInt(0, 3);
-    let x, y;
-
-    // Spawn from edges
-    switch (side) {
-      case 0: // top
-        x = randomInt(0, this.game.width);
-        y = -20;
-        break;
-      case 1: // right
-        x = this.game.width + 20;
-        y = randomInt(0, this.game.height);
-        break;
-      case 2: // bottom
-        x = randomInt(0, this.game.width);
-        y = this.game.height + 20;
-        break;
-      case 3: // left
-        x = -20;
-        y = randomInt(0, this.game.height);
-        break;
+    if (this.game.enemies.length >= this.maxEnemiesAtOnce) {
+      return;
     }
 
-    // Enemy type based on wave
+    const spawnPoints = this.getEnemySpawnPoints();
+    if (spawnPoints.length === 0) {
+      return;
+    }
+
+    const spawnPoint = spawnPoints[randomInt(0, spawnPoints.length - 1)];
+    const x = spawnPoint.x;
+    const y = spawnPoint.y;
+
     let type = "basic";
-    if (this.currentWave > 3 && Math.random() < 0.3) {
+    if (Math.random() < 0.25) {
       type = "fast";
-    }
-    if (this.currentWave > 6 && Math.random() < 0.2) {
+    } else if (Math.random() < 0.1) {
       type = "tank";
     }
 
-    const enemy = new Enemy(x, y, type);
+    const enemy = new Enemy(x, y, type, this.game);
+    if (this.game.difficultyScale) {
+      enemy.applyDifficultyScaling(this.game.difficultyScale);
+    }
     this.game.enemies.push(enemy);
-    this.enemiesSpawnedThisWave++;
+  }
+
+  getEnemySpawnPoints() {
+    const tileCenters = this.game.map.getWalkableTileCenters();
+    const centerX = this.game.width / 2;
+    const centerY = this.game.height / 2;
+    const minDistanceFromPlayer = 120;
+
+    return tileCenters.filter((point) => {
+      const dx = point.x - centerX;
+      const dy = point.y - centerY;
+      return Math.sqrt(dx * dx + dy * dy) >= minDistanceFromPlayer;
+    });
   }
 
   getWaveInfo() {

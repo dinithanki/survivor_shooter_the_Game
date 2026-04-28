@@ -5,10 +5,11 @@ import Bullet from "./Bullet.js";
  * Enemy entity - pursues and attacks the player
  */
 export default class Enemy {
-  constructor(x, y, type = "basic") {
+  constructor(x, y, type = "basic", game = null) {
     this.x = x;
     this.y = y;
     this.type = type;
+    this.game = game;
     this.width = 20;
     this.height = 20;
     this.dead = false;
@@ -20,6 +21,8 @@ export default class Enemy {
   }
 
   setTypeStats(type) {
+    this.baseShootRate = 1.2;
+    this.baseHp = 3;
     switch (type) {
       case "fast":
         this.speed = 200;
@@ -28,8 +31,11 @@ export default class Enemy {
         this.radius = 8;
         this.color = "orange";
         this.points = 15;
-        this.shootRate = 1.5; // seconds between shots
+        this.baseShootRate = 1.5; // seconds between shots
+        this.shootRate = this.baseShootRate;
         this.shootRange = 300; // pixels
+        this.stoppingDistance = 200; // hold position at this range
+        this.baseHp = 1;
         break;
       case "tank":
         this.speed = 80;
@@ -38,8 +44,11 @@ export default class Enemy {
         this.radius = 15;
         this.color = "darkred";
         this.points = 25;
-        this.shootRate = 0.8; // shoots more often
+        this.baseShootRate = 0.8; // shoots more often
+        this.shootRate = this.baseShootRate;
         this.shootRange = 350;
+        this.stoppingDistance = 250; // tanks hold further back
+        this.baseHp = 5;
         break;
       default: // basic
         this.speed = 120;
@@ -48,10 +57,23 @@ export default class Enemy {
         this.radius = 10;
         this.color = "red";
         this.points = 10;
-        this.shootRate = 1.2; // seconds between shots
+        this.baseShootRate = 1.2; // seconds between shots
+        this.shootRate = this.baseShootRate;
         this.shootRange = 300; // pixels
+        this.stoppingDistance = 180; // hold at medium range
+        this.baseHp = 3;
     }
     this.shootCooldown = Math.random() * this.shootRate; // random initial cooldown
+  }
+
+  applyDifficultyScaling(difficultyScale) {
+    const bonusHp = difficultyScale.enemyHpBonus || 0;
+    const shootRateMultiplier = difficultyScale.enemyShootRateMultiplier || 1;
+
+    this.maxHp = this.baseHp + bonusHp;
+    this.hp = Math.min(this.hp + bonusHp, this.maxHp);
+    this.shootRate = Math.max(0.35, this.baseShootRate * shootRateMultiplier);
+    this.shootCooldown = Math.min(this.shootCooldown, this.shootRate);
   }
 
   update(player, dt) {
@@ -63,9 +85,22 @@ export default class Enemy {
     if (dist > 0) {
       const nx = dx / dist;
       const ny = dy / dist;
-      this.x += nx * this.speed * dt;
-      this.y += ny * this.speed * dt;
-      // Update facing angle to point toward player
+
+      // Chase until reaching stopping distance, then hold position
+      if (dist > this.stoppingDistance) {
+        const nextX = this.x + nx * this.speed * dt;
+        const nextY = this.y + ny * this.speed * dt;
+
+        if (this.canMoveTo(nextX, this.y)) {
+          this.x = nextX;
+        }
+
+        if (this.canMoveTo(this.x, nextY)) {
+          this.y = nextY;
+        }
+      }
+
+      // Always face the player
       this.facingAngle = Math.atan2(dy, dx);
     }
 
@@ -73,6 +108,30 @@ export default class Enemy {
     this.shootCooldown -= dt;
 
     this.age += dt;
+  }
+
+  canMoveTo(x, y) {
+    const halfWidth = this.width / 2 - 1;
+    const halfHeight = this.height / 2 - 1;
+    const points = [
+      [x - halfWidth, y - halfHeight],
+      [x + halfWidth, y - halfHeight],
+      [x - halfWidth, y + halfHeight],
+      [x + halfWidth, y + halfHeight],
+    ];
+
+    return points.every(([pointX, pointY]) => {
+      if (
+        pointX < 0 ||
+        pointY < 0 ||
+        pointX > this.game.width ||
+        pointY > this.game.height
+      ) {
+        return true;
+      }
+
+      return this.game.map.isWalkable(pointX, pointY);
+    });
   }
 
   draw(ctx) {
@@ -141,6 +200,7 @@ export default class Enemy {
       this.y + offsetY,
       angle,
       "enemy",
+      this.game,
     );
 
     this.shootCooldown = this.shootRate;

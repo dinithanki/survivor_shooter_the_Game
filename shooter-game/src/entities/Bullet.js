@@ -2,7 +2,7 @@
  * Bullet entity - projectile fired by player or enemy
  */
 export default class Bullet {
-  constructor(x, y, angle, shooter = "player") {
+  constructor(x, y, angle, shooter = "player", game = null) {
     this.x = x;
     this.y = y;
     this.angle = angle;
@@ -12,11 +12,21 @@ export default class Bullet {
     this.lifetime = 5; // seconds
     this.age = 0;
     this.shooter = shooter; // "player" or "enemy"
+    this.game = game;
   }
 
   update(dt) {
-    this.x += Math.cos(this.angle) * this.speed * dt;
-    this.y += Math.sin(this.angle) * this.speed * dt;
+    const nextX = this.x + Math.cos(this.angle) * this.speed * dt;
+    const nextY = this.y + Math.sin(this.angle) * this.speed * dt;
+
+    // Check if bullet hits a wall
+    if (this.game && !this.game.map.isWalkable(nextX, nextY)) {
+      this.dead = true;
+      return;
+    }
+
+    this.x = nextX;
+    this.y = nextY;
     this.age += dt;
 
     // Remove if out of bounds or lifetime exceeded
