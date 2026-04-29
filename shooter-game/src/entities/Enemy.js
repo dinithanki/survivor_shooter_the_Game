@@ -111,27 +111,11 @@ export default class Enemy {
   }
 
   canMoveTo(x, y) {
-    const halfWidth = this.width / 2 - 1;
-    const halfHeight = this.height / 2 - 1;
-    const points = [
-      [x - halfWidth, y - halfHeight],
-      [x + halfWidth, y - halfHeight],
-      [x - halfWidth, y + halfHeight],
-      [x + halfWidth, y + halfHeight],
-    ];
+    return this.game.map.isRectWalkable(x, y, this.width - 2, this.height - 2);
+  }
 
-    return points.every(([pointX, pointY]) => {
-      if (
-        pointX < 0 ||
-        pointY < 0 ||
-        pointX > this.game.width ||
-        pointY > this.game.height
-      ) {
-        return true;
-      }
-
-      return this.game.map.isWalkable(pointX, pointY);
-    });
+  getCollisionRadius() {
+    return Math.min(this.width, this.height) / 2 - 1;
   }
 
   draw(ctx) {

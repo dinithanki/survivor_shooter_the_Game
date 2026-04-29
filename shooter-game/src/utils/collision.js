@@ -9,6 +9,31 @@ export function circleCollision(x1, y1, r1, x2, y2, r2) {
   return distance < r1 + r2;
 }
 
+export function getCircleCollisionData(x1, y1, r1, x2, y2, r2) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  const minDistance = r1 + r2;
+
+  if (distance >= minDistance) {
+    return null;
+  }
+
+  if (distance === 0) {
+    return {
+      overlap: minDistance,
+      normalX: 1,
+      normalY: 0,
+    };
+  }
+
+  return {
+    overlap: minDistance - distance,
+    normalX: dx / distance,
+    normalY: dy / distance,
+  };
+}
+
 export function rectCollision(x1, y1, w1, h1, x2, y2, w2, h2) {
   return x1 < x2 + w2 && x1 + w1 > x2 && y1 < y2 + h2 && y1 + h1 > y2;
 }

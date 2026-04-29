@@ -85,18 +85,11 @@ export default class Player {
   }
 
   canMoveTo(x, y) {
-    const halfWidth = this.width / 2 - 1;
-    const halfHeight = this.height / 2 - 1;
-    const points = [
-      [x - halfWidth, y - halfHeight],
-      [x + halfWidth, y - halfHeight],
-      [x - halfWidth, y + halfHeight],
-      [x + halfWidth, y + halfHeight],
-    ];
+    return this.game.map.isRectWalkable(x, y, this.width - 2, this.height - 2);
+  }
 
-    return points.every(([pointX, pointY]) =>
-      this.game.map.isWalkable(pointX, pointY),
-    );
+  getCollisionRadius() {
+    return Math.min(this.width, this.height) / 2 - 1;
   }
 
   updateShootCooldown(dt) {

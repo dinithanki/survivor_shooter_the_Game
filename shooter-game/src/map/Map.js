@@ -45,6 +45,45 @@ export default class Map {
     return this.mapData.isWalkable(tileX, tileY);
   }
 
+  isRectWalkable(centerX, centerY, width, height) {
+    const left = centerX - width / 2;
+    const right = centerX + width / 2;
+    const top = centerY - height / 2;
+    const bottom = centerY + height / 2;
+
+    const minTileX = Math.floor(left / this.tileSize);
+    const maxTileX = Math.floor((right - 1) / this.tileSize);
+    const minTileY = Math.floor(top / this.tileSize);
+    const maxTileY = Math.floor((bottom - 1) / this.tileSize);
+
+    for (let tileY = minTileY; tileY <= maxTileY; tileY++) {
+      for (let tileX = minTileX; tileX <= maxTileX; tileX++) {
+        if (!this.mapData.isWalkable(tileX, tileY)) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  isCircleWalkable(centerX, centerY, radius) {
+    const minTileX = Math.floor((centerX - radius) / this.tileSize);
+    const maxTileX = Math.floor((centerX + radius) / this.tileSize);
+    const minTileY = Math.floor((centerY - radius) / this.tileSize);
+    const maxTileY = Math.floor((centerY + radius) / this.tileSize);
+
+    for (let tileY = minTileY; tileY <= maxTileY; tileY++) {
+      for (let tileX = minTileX; tileX <= maxTileX; tileX++) {
+        if (!this.mapData.isWalkable(tileX, tileY)) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
   getWalkableTileCenters() {
     const centers = [];
 

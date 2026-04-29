@@ -1,7 +1,11 @@
 /**
  * Collision system - handles all collision detection
  */
-import { circleCollision, rectCollision } from "../utils/collision.js";
+import {
+  circleCollision,
+  getCircleCollisionData,
+  rectCollision,
+} from "../utils/collision.js";
 
 export default class CollisionSystem {
   constructor(game) {
@@ -13,6 +17,7 @@ export default class CollisionSystem {
     this.checkEnemyBulletPlayerCollision();
     this.checkEnemyPlayerCollision();
     this.checkPlayerPowerUpCollision();
+    this.resolveTankCollisions();
   }
 
   checkBulletEnemyCollision() {
@@ -118,6 +123,76 @@ export default class CollisionSystem {
         this.game.collectPowerUp(powerUp);
       }
     }
+  }
+
+  resolveTankCollisions() {
+    const tanks = [this.game.player, ...this.game.enemies].filter(Boolean);
+
+    // A couple of passes keeps the separation smooth when several tanks stack up.
+    for (let pass = 0; pass < 2; pass++) {
+      for (let i = 0; i < tanks.length; i++) {
+        for (let j = i + 1; j < tanks.length; j++) {
+          const tankA = tanks[i];
+          const tankB = tanks[j];
+          const radiusA = this.getTankRadius(tankA);
+          const radiusB = this.getTankRadius(tankB);
+
+          const collision = getCircleCollisionData(
+            tankA.x,
+            tankA.y,
+            radiusA,
+            tankB.x,
+            tankB.y,
+            radiusB,
+          );
+
+          if (!collision) {
+            continue;
+          }
+
+          const pushX = (collision.normalX * collision.overlap) / 2;
+          const pushY = (collision.normalY * collision.overlap) / 2;
+
+          this.moveTank(tankA, tankA.x - pushX, tankA.y - pushY);
+          this.moveTank(tankB, tankB.x + pushX, tankB.y + pushY);
+        }
+      }
+    }
+  }
+
+  getTankRadius(tank) {
+    if (tank && typeof tank.getCollisionRadius === "function") {
+      return tank.getCollisionRadius();
+    }
+
+    return tank.radius || 10;
+  }
+
+  moveTank(tank, x, y) {
+    const halfWidth = tank.width / 2;
+    const halfHeight = tank.height / 2;
+
+    const nextX = Math.max(halfWidth, Math.min(x, this.game.width - halfWidth));
+    const nextY = Math.max(
+      halfHeight,
+      Math.min(y, this.game.height - halfHeight),
+    );
+
+    if (this.canTankMoveTo(tank, nextX, tank.y)) {
+      tank.x = nextX;
+    }
+
+    if (this.canTankMoveTo(tank, tank.x, nextY)) {
+      tank.y = nextY;
+    }
+  }
+
+  canTankMoveTo(tank, x, y) {
+    if (typeof tank.canMoveTo === "function") {
+      return tank.canMoveTo(x, y);
+    }
+
+    return this.game.map.isRectWalkable(x, y, tank.width - 2, tank.height - 2);
   }
 
   circleCollides(obj1, obj2) {
