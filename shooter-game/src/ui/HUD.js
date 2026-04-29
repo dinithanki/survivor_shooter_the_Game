@@ -12,6 +12,7 @@ export default class HUD {
     this.drawHealth(ctx);
     this.drawScore(ctx);
     this.drawWave(ctx);
+    this.drawPowerUps(ctx);
     this.drawFPS(ctx);
   }
 
@@ -34,9 +35,10 @@ export default class HUD {
     ctx.fillStyle = healthPercent > 0.3 ? "lime" : "red";
     ctx.fillRect(x + 40, y - 15, 100 * healthPercent, 20);
 
-    // Health text
+    // Health text (as percentage * 10)
     ctx.fillStyle = "white";
-    ctx.fillText(Math.ceil(player.hp) + "/" + player.maxHp, x + 150, y);
+    const healthPercentage = Math.ceil((player.hp / player.maxHp) * 100);
+    ctx.fillText(healthPercentage + "%", x + 150, y);
   }
 
   drawScore(ctx) {
@@ -71,5 +73,30 @@ export default class HUD {
     ctx.fillStyle = "gray";
     ctx.font = "12px Arial";
     ctx.fillText("FPS: " + Math.round(1 / this.game.time.deltaTime), x, y);
+  }
+
+  drawPowerUps(ctx) {
+    const x = this.game.width - 220;
+    const y = 52;
+
+    if (this.game.isSuperBulletsActive()) {
+      ctx.fillStyle = "#ffd86b";
+      ctx.font = "bold 14px Arial";
+      ctx.fillText(
+        "Super Bullets: " + this.game.superBulletTimer.toFixed(1) + "s",
+        x,
+        y,
+      );
+    }
+
+    if (this.game.isShieldActive()) {
+      ctx.fillStyle = "#86e7ff";
+      ctx.font = "bold 14px Arial";
+      ctx.fillText(
+        "Shield: " + this.game.shieldTimer.toFixed(1) + "s",
+        x,
+        this.game.isSuperBulletsActive() ? y + 20 : y,
+      );
+    }
   }
 }

@@ -23,6 +23,12 @@ export default class WaveSystem {
   startWave() {
     this.currentWave = 1;
     this.game.enemies = [];
+    this.game.bullets = [];
+    this.game.powerUps = [];
+    this.game.setMapForWave(this.currentWave);
+
+    // Restore player health to full at the start of a new wave
+    this.game.player.hp = this.game.player.maxHp;
 
     const enemyCount = this.initialEnemyCount;
     for (let i = 0; i < enemyCount; i++) {
@@ -35,9 +41,17 @@ export default class WaveSystem {
   nextWave() {
     this.currentWave++;
     this.game.enemies = [];
+    this.game.bullets = [];
+    this.game.powerUps = [];
+    this.game.setMapForWave(this.currentWave);
 
-    const enemyCount =
-      this.initialEnemyCount + Math.floor((this.currentWave - 1) / 2);
+    // Restore player health to full at the start of a new wave
+    this.game.player.hp = this.game.player.maxHp;
+
+    const enemyCount = Math.min(
+      this.maxEnemiesAtOnce,
+      this.initialEnemyCount + (this.currentWave - 1) * 2,
+    );
     for (let i = 0; i < enemyCount; i++) {
       this.spawnEnemy();
     }
@@ -48,8 +62,8 @@ export default class WaveSystem {
   applyDifficultyScaling(difficultyScale) {
     const tier = Math.max(0, Math.floor((this.game.score || 0) / 100));
     this.maxEnemiesAtOnce = Math.min(
-      24,
-      this.initialEnemyCount + Math.floor(tier / 2),
+      48,
+      this.initialEnemyCount + tier + Math.floor(this.currentWave / 2),
     );
   }
 
@@ -72,10 +86,14 @@ export default class WaveSystem {
     const y = spawnPoint.y;
 
     let type = "basic";
-    if (Math.random() < 0.25) {
-      type = "fast";
-    } else if (Math.random() < 0.1) {
+    const tankChance = Math.min(0.22, 0.01 + (this.currentWave - 1) * 0.012);
+    const fastChance = Math.min(0.45, 0.2 + this.currentWave * 0.02);
+    const roll = Math.random();
+
+    if (roll < tankChance) {
       type = "tank";
+    } else if (roll < tankChance + fastChance) {
+      type = "fast";
     }
 
     const enemy = new Enemy(x, y, type, this.game);

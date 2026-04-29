@@ -1,6 +1,7 @@
 import Player from "../entities/Player.js";
 import Enemy from "../entities/Enemy.js";
 import Particle from "../entities/Particle.js";
+import PowerUp from "../entities/PowerUp.js";
 
 // Core systems
 import Input from "./Input.js";
@@ -28,8 +29,8 @@ export default class Game {
     this.ctx = this.canvas.getContext("2d");
     this.width = 800;
     this.height = 600;
-    this.canvas.width = this.width;
-    this.canvas.height = this.height;
+    this.pixelRatio = window.devicePixelRatio || 1;
+    this.resizeCanvas();
 
     // Core systems
     this.input = new Input();
@@ -40,18 +41,32 @@ export default class Game {
     this.enemies = [];
     this.bullets = [];
     this.particles = [];
+    this.powerUps = [];
 
     // Game state
     this.score = 0;
     this.isPaused = false;
     this.isGameOver = false;
+    this.hasStarted = false;
     this.difficultyTier = -1;
     this.difficultyScale = {
       playerMaxHp: 100,
       playerShootRate: 0.1,
+      playerShotCount: 1,
       enemyHpBonus: 0,
       enemyShootRateMultiplier: 1,
     };
+    this.superBulletTimer = 0;
+    this.shieldTimer = 0;
+    this.nextSuperPowerUpScore = 180;
+    this.nextShieldPowerUpScore = 280;
+
+    this.settings = {
+      playerColor: "dodgerblue",
+    };
+    this.onPauseChange = null;
+    this.mapPresets = ["cross", "maze", "diamond", "grid", "spiral", "default"];
+    this.mapPresetIndex = 0;
 
     // Game systems
     this.collisionSystem = new CollisionSystem(this);
@@ -61,14 +76,21 @@ export default class Game {
 
     // Map and UI
     // selected map preset (used when creating map / restarting)
-    this.selectedMapPreset = "cross";
+    this.selectedMapPreset = this.mapPresets[this.mapPresetIndex];
     this.map = new Map(this.width, this.height, this.selectedMapPreset);
     this.hud = new HUD(this);
     this.overlay = new Overlay(this);
     this.menu = new Menu(this);
 
+    this.handleResize = this.handleResize.bind(this);
+    window.addEventListener("resize", this.handleResize);
+
     // Keyboard controls
     window.addEventListener("keydown", (e) => {
+      if (!this.hasStarted) {
+        return;
+      }
+
       if (e.key.toLowerCase() === "p") {
         this.togglePause();
       }
@@ -82,8 +104,82 @@ export default class Game {
   }
 
   start() {
-    this.waveSystem.startWave();
     this.gameLoop();
+  }
+
+  beginGame() {
+    this.hasStarted = true;
+    this.restart();
+  }
+
+  resizeCanvas() {
+    const rect = this.canvas.getBoundingClientRect();
+    const displayWidth = Math.max(1, Math.floor(rect.width || this.width));
+    const displayHeight = Math.max(1, Math.floor(rect.height || this.height));
+
+    this.width = displayWidth;
+    this.height = displayHeight;
+
+    this.pixelRatio = window.devicePixelRatio || 1;
+    this.canvas.width = Math.round(displayWidth * this.pixelRatio);
+    this.canvas.height = Math.round(displayHeight * this.pixelRatio);
+    this.canvas.style.width = `${displayWidth}px`;
+    this.canvas.style.height = `${displayHeight}px`;
+
+    this.ctx.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
+  }
+
+  handleResize() {
+    const oldWidth = this.width;
+    const oldHeight = this.height;
+
+    this.resizeCanvas();
+
+    if (!oldWidth || !oldHeight || !this.map) {
+      return;
+    }
+
+    const scaleX = this.width / oldWidth;
+    const scaleY = this.height / oldHeight;
+
+    if (this.player) {
+      this.player.x *= scaleX;
+      this.player.y *= scaleY;
+      this.player.x = Math.max(
+        this.player.width / 2,
+        Math.min(this.player.x, this.width - this.player.width / 2),
+      );
+      this.player.y = Math.max(
+        this.player.height / 2,
+        Math.min(this.player.y, this.height - this.player.height / 2),
+      );
+    }
+
+    for (const enemy of this.enemies) {
+      enemy.x *= scaleX;
+      enemy.y *= scaleY;
+    }
+
+    for (const bullet of this.bullets) {
+      bullet.x *= scaleX;
+      bullet.y *= scaleY;
+    }
+
+    for (const particle of this.particles) {
+      particle.x *= scaleX;
+      particle.y *= scaleY;
+    }
+
+    for (const powerUp of this.powerUps) {
+      powerUp.x *= scaleX;
+      powerUp.y *= scaleY;
+    }
+
+    this.map = new Map(this.width, this.height, this.selectedMapPreset);
+  }
+
+  setPauseChangeHandler(handler) {
+    this.onPauseChange = handler;
   }
 
   gameLoop = () => {
@@ -101,6 +197,10 @@ export default class Game {
       return;
     }
 
+    if (!this.hasStarted) {
+      return;
+    }
+
     if (!this.isPaused) {
       this.updateDifficultyScaling();
 
@@ -109,16 +209,21 @@ export default class Game {
       this.player.update(this.input, dt);
       this.shootingSystem.update(this.input, dt);
       this.waveSystem.update(dt);
+      this.updatePowerUps(dt);
+      this.updatePowerUpTimers(dt);
+      this.trySpawnScorePowerUps();
 
       // Update entities
       this.bullets.forEach((b) => b.update(dt));
       this.enemies.forEach((e) => e.update(this.player, dt));
       this.particles.forEach((p) => p.update(dt));
+      this.powerUps.forEach((powerUp) => powerUp.update(dt));
 
       // Remove dead entities
       this.bullets = this.bullets.filter((b) => !b.dead);
       this.enemies = this.enemies.filter((e) => !e.dead);
       this.particles = this.particles.filter((p) => !p.dead);
+      this.powerUps = this.powerUps.filter((powerUp) => !powerUp.dead);
 
       // Check collisions and damage
       this.collisionSystem.update();
@@ -137,6 +242,7 @@ export default class Game {
     // Draw game entities
     this.enemies.forEach((e) => e.draw(this.ctx));
     this.bullets.forEach((b) => b.draw(this.ctx));
+    this.powerUps.forEach((powerUp) => powerUp.draw(this.ctx));
     this.particles.forEach((p) => p.draw(this.ctx));
     this.player.draw(this.ctx);
 
@@ -146,8 +252,6 @@ export default class Game {
     // Draw overlays
     if (this.isGameOver) {
       this.overlay.show("gameOver");
-    } else if (this.isPaused) {
-      this.overlay.show("pause");
     } else {
       this.overlay.hide();
     }
@@ -162,16 +266,26 @@ export default class Game {
   }
 
   togglePause() {
-    if (this.isGameOver) return;
+    if (this.isGameOver || !this.hasStarted) return;
     this.isPaused = !this.isPaused;
+    if (this.onPauseChange) {
+      this.onPauseChange(this.isPaused);
+    }
+  }
+
+  goToMainMenu() {
+    this.isPaused = false;
+    this.hasStarted = false;
   }
 
   restart() {
     // Reset game state
     this.player = new Player(this.width / 2, this.height / 2, this);
+    this.player.setColor(this.settings.playerColor);
     this.enemies = [];
     this.bullets = [];
     this.particles = [];
+    this.powerUps = [];
     this.score = 0;
     this.isPaused = false;
     this.isGameOver = false;
@@ -179,9 +293,16 @@ export default class Game {
     this.difficultyScale = {
       playerMaxHp: 100,
       playerShootRate: 0.1,
+      playerShotCount: 1,
       enemyHpBonus: 0,
       enemyShootRateMultiplier: 1,
     };
+    this.superBulletTimer = 0;
+    this.shieldTimer = 0;
+    this.nextSuperPowerUpScore = 180;
+    this.nextShieldPowerUpScore = 280;
+    this.mapPresetIndex = 0;
+    this.selectedMapPreset = this.mapPresets[this.mapPresetIndex];
 
     // Recreate map with selected preset
     this.map = new Map(this.width, this.height, this.selectedMapPreset);
@@ -189,6 +310,28 @@ export default class Game {
     // Reset systems
     this.waveSystem = new WaveSystem(this);
     this.waveSystem.startWave();
+  }
+
+  setPlayerColor(color) {
+    this.settings.playerColor = color;
+    if (this.player && this.player.setColor) {
+      this.player.setColor(color);
+    }
+  }
+
+  setMapForWave(waveNumber) {
+    if (!this.mapPresets.length) {
+      return;
+    }
+
+    this.mapPresetIndex = (waveNumber - 1) % this.mapPresets.length;
+    this.selectedMapPreset = this.mapPresets[this.mapPresetIndex];
+    this.map = new Map(this.width, this.height, this.selectedMapPreset);
+
+    if (this.player) {
+      this.player.x = this.width / 2;
+      this.player.y = this.height / 2;
+    }
   }
 
   updateDifficultyScaling() {
@@ -200,20 +343,23 @@ export default class Game {
     this.difficultyTier = tier;
 
     const playerMaxHp = 100 + tier * 10;
-    const playerShootRate = Math.max(0.05, 0.1 - tier * 0.005);
-    const enemyHpBonus = tier;
+    const playerShootRate = Math.max(0.045, 0.1 - tier * 0.006);
+    const playerShotCount = Math.min(5, 1 + Math.floor(tier / 2));
+    const enemyHpBonus = tier + Math.floor(tier / 2);
     const enemyShootRateMultiplier = Math.max(0.75, 1 - tier * 0.05);
 
     this.difficultyScale = {
       playerMaxHp,
       playerShootRate,
+      playerShotCount,
       enemyHpBonus,
       enemyShootRateMultiplier,
     };
 
     this.player.maxHp = playerMaxHp;
-    this.player.hp = Math.min(playerMaxHp, this.player.hp + 5);
+    this.player.hp = Math.min(playerMaxHp, this.player.hp);
     this.player.shootRate = playerShootRate;
+    this.player.shotCount = playerShotCount;
 
     for (const enemy of this.enemies) {
       enemy.applyDifficultyScaling(this.difficultyScale);
@@ -225,5 +371,63 @@ export default class Game {
   addParticles(x, y, count = 8) {
     const particles = Particle.createExplosion(x, y, count);
     this.particles.push(...particles);
+  }
+
+  updatePowerUps(dt) {
+    for (const powerUp of this.powerUps) {
+      powerUp.update(dt);
+    }
+  }
+
+  updatePowerUpTimers(dt) {
+    if (this.superBulletTimer > 0) {
+      this.superBulletTimer = Math.max(0, this.superBulletTimer - dt);
+    }
+
+    if (this.shieldTimer > 0) {
+      this.shieldTimer = Math.max(0, this.shieldTimer - dt);
+    }
+  }
+
+  trySpawnScorePowerUps() {
+    if (this.score >= this.nextSuperPowerUpScore) {
+      this.spawnPowerUp("super", 8);
+      this.nextSuperPowerUpScore += 180;
+    }
+
+    if (this.score >= this.nextShieldPowerUpScore) {
+      this.spawnPowerUp("shield", 6);
+      this.nextShieldPowerUpScore += 240;
+    }
+  }
+
+  spawnPowerUp(type, duration) {
+    const candidates = this.map.getWalkableTileCenters();
+    if (!candidates.length) {
+      return;
+    }
+
+    const spawnPoint =
+      candidates[Math.floor(Math.random() * candidates.length)];
+    this.powerUps.push(new PowerUp(spawnPoint.x, spawnPoint.y, type, duration));
+  }
+
+  collectPowerUp(powerUp) {
+    if (powerUp.type === "super") {
+      this.superBulletTimer = Math.max(this.superBulletTimer, powerUp.duration);
+    } else if (powerUp.type === "shield") {
+      this.shieldTimer = Math.max(this.shieldTimer, powerUp.duration);
+    }
+
+    powerUp.dead = true;
+    this.addParticles(powerUp.x, powerUp.y, 6);
+  }
+
+  isSuperBulletsActive() {
+    return this.superBulletTimer > 0;
+  }
+
+  isShieldActive() {
+    return this.shieldTimer > 0;
   }
 }

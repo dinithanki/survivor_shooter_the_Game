@@ -3,13 +3,187 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Survivor Shooter Game</title>
+    <title>Survivor Shooter | Neon Arena</title>
     <link rel="stylesheet" href="/src/styles/game.css" />
   </head>
 
   <body>
     <div class="game-container">
       <canvas id="game"></canvas>
+
+      <div id="intro-screen" class="intro-screen">
+        <div class="intro-card" id="intro-main-panel">
+          <div class="intro-hero-copy">
+            <p class="intro-kicker">Arcade Survival</p>
+            <div class="intro-chip-row">
+              <span class="intro-chip">Endless Waves</span>
+              <span class="intro-chip">Power-Ups</span>
+              <span class="intro-chip">Dynamic Maps</span>
+            </div>
+            <h1 class="intro-title">Survivor Shooter</h1>
+            <p class="intro-subtitle">
+              Drop into a neon battlefield, dodge incoming fire, and chain
+              score as the arena gets more dangerous every wave.
+            </p>
+
+            <div class="intro-actions">
+              <button id="start-btn" class="intro-btn intro-btn-primary">
+                Play Now
+              </button>
+              <button id="settings-btn" class="intro-btn">Settings</button>
+              <button id="howto-btn" class="intro-btn">How To Play</button>
+            </div>
+
+            <div class="intro-banners">
+              <div class="intro-banner">
+                <span class="intro-banner-label">Combat Loop</span>
+                <strong>Move, shoot, survive, upgrade.</strong>
+              </div>
+              <div class="intro-banner">
+                <span class="intro-banner-label">Hotkeys</span>
+                <strong>WASD, Space, P, R, M</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="intro-briefing">
+            <section class="intro-brief-card">
+              <p class="intro-brief-label">Mission Brief</p>
+              <h2>Hold the arena and push your score as waves escalate.</h2>
+              <p>
+                Enemy fire, rotating maps, and rare power-ups keep each run
+                moving fast. Stay mobile and control the middle of the field.
+              </p>
+            </section>
+
+            <div class="intro-feature-grid">
+              <article class="intro-feature">
+                <span>01</span>
+                <h3>Fast Movement</h3>
+                <p>Strafe with WASD and avoid getting boxed in.</p>
+              </article>
+              <article class="intro-feature">
+                <span>02</span>
+                <h3>Heavy Firepower</h3>
+                <p>Hold Space to fire continuously and clear the lane.</p>
+              </article>
+              <article class="intro-feature">
+                <span>03</span>
+                <h3>Survival Tools</h3>
+                <p>Use shields and super bullets to survive harder waves.</p>
+              </article>
+            </div>
+          </div>
+        </div>
+
+        <div class="intro-card intro-panel hidden" id="settings-panel">
+          <h2>Settings</h2>
+
+          <label class="setting-row" for="music-toggle">
+            <span>Music</span>
+            <input id="music-toggle" type="checkbox" checked />
+          </label>
+
+          <label class="setting-row" for="volume-range">
+            <span>Sound Volume</span>
+            <input
+              id="volume-range"
+              type="range"
+              min="0"
+              max="100"
+              value="40"
+            />
+          </label>
+
+          <fieldset class="color-picker">
+            <legend>Player Color</legend>
+            <div class="color-options">
+              <button
+                class="color-swatch active"
+                data-color="#1e90ff"
+                style="background: #1e90ff"
+                aria-label="Blue"
+              ></button>
+              <button
+                class="color-swatch"
+                data-color="#ff6b6b"
+                style="background: #ff6b6b"
+                aria-label="Coral"
+              ></button>
+              <button
+                class="color-swatch"
+                data-color="#6ee7b7"
+                style="background: #6ee7b7"
+                aria-label="Mint"
+              ></button>
+              <button
+                class="color-swatch"
+                data-color="#facc15"
+                style="background: #facc15"
+                aria-label="Gold"
+              ></button>
+              <button
+                class="color-swatch"
+                data-color="#c084fc"
+                style="background: #c084fc"
+                aria-label="Lavender"
+              ></button>
+            </div>
+          </fieldset>
+
+          <button id="settings-back-btn" class="intro-btn intro-btn-ghost">
+            Back
+          </button>
+        </div>
+
+        <div class="intro-card intro-panel hidden" id="howto-panel">
+          <h2>How To Play</h2>
+          <ul class="howto-list">
+            <li>Use W A S D to move around the map.</li>
+            <li>Hold Space to fire continuously.</li>
+            <li>Avoid enemy bullets and body collisions.</li>
+            <li>Defeat enemies to score points and unlock tougher waves.</li>
+            <li>Press P to pause and M to open the tactical menu.</li>
+          </ul>
+
+          <button id="howto-back-btn" class="intro-btn intro-btn-ghost">
+            Back
+          </button>
+        </div>
+
+        <div class="intro-card intro-panel hidden" id="pause-panel">
+          <p class="intro-kicker">Combat Frozen</p>
+          <h2>Pause Menu</h2>
+          <p class="intro-subtitle intro-subtitle-compact">
+            Reposition, adjust your setup, or jump straight back into the
+            arena.
+          </p>
+          <div class="pause-snapshot">
+            <div>
+              <span>State</span>
+              <strong>Paused</strong>
+            </div>
+            <div>
+              <span>Control</span>
+              <strong>P resumes</strong>
+            </div>
+            <div>
+              <span>Menu</span>
+              <strong>Settings / Briefing / Main</strong>
+            </div>
+          </div>
+          <div class="intro-actions">
+            <button id="resume-btn" class="intro-btn intro-btn-primary">
+              Return to Battle
+            </button>
+            <button id="pause-settings-btn" class="intro-btn">Settings</button>
+            <button id="pause-howto-btn" class="intro-btn">How To Play</button>
+            <button id="pause-main-btn" class="intro-btn intro-btn-ghost">
+              Main Menu
+            </button>
+          </div>
+        </div>
+      </div>
 
       <div class="controls">
         <div class="control-item">

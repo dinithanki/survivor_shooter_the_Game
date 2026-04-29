@@ -15,11 +15,17 @@ export default class Player {
 
     this.shootCooldown = 0;
     this.shootRate = 0.1; // seconds between shots
+    this.shotCount = 1;
+    this.spreadAngle = 0.2;
     this.facingAngle = -Math.PI / 2;
     this.hp = 100;
     this.maxHp = 100;
     this.invulnerableTime = 0;
     this.invulnerableDuration = 2; // seconds
+    this.color =
+      (this.game && this.game.settings && this.game.settings.playerColor) ||
+      "dodgerblue";
+    this.accentColor = "#bff6ff";
   }
 
   update(input, dt) {
@@ -98,16 +104,26 @@ export default class Player {
   }
 
   shoot(game = null) {
+    const targetGame = game || this.game;
     const offsetX = Math.cos(this.facingAngle) * 18;
     const offsetY = Math.sin(this.facingAngle) * 18;
-    const bullet = new Bullet(
-      this.x + offsetX,
-      this.y + offsetY,
-      this.facingAngle,
-      "player",
-      game || this.game,
-    );
-    this.game.bullets.push(bullet);
+
+    const totalShots = Math.max(1, this.shotCount);
+    const mid = (totalShots - 1) / 2;
+    for (let i = 0; i < totalShots; i++) {
+      const spreadOffset = (i - mid) * this.spreadAngle;
+      const bullet = new Bullet(
+        this.x + offsetX,
+        this.y + offsetY,
+        this.facingAngle + spreadOffset,
+        "player",
+        targetGame,
+      );
+      bullet.damage = targetGame.isSuperBulletsActive() ? 3 : 1;
+      bullet.radius = targetGame.isSuperBulletsActive() ? 5 : 4;
+      this.game.bullets.push(bullet);
+    }
+
     this.shootCooldown = this.shootRate;
   }
 
@@ -115,6 +131,10 @@ export default class Player {
     if (this.invulnerableTime > 0) return;
     this.hp -= amount;
     this.invulnerableTime = this.invulnerableDuration;
+  }
+
+  setColor(color) {
+    this.color = color;
   }
 
   draw(ctx) {
@@ -127,7 +147,7 @@ export default class Player {
     ctx.translate(this.x, this.y);
     ctx.rotate(this.facingAngle + Math.PI / 2);
 
-    ctx.fillStyle = "dodgerblue";
+    ctx.fillStyle = this.color;
     ctx.beginPath();
     ctx.moveTo(0, -this.height / 2);
     ctx.lineTo(this.width / 2, this.height / 2);
@@ -136,7 +156,7 @@ export default class Player {
     ctx.closePath();
     ctx.fill();
 
-    ctx.fillStyle = "cyan";
+    ctx.fillStyle = this.accentColor;
     ctx.fillRect(-2, -this.height / 2 - 6, 4, 6);
 
     ctx.restore();

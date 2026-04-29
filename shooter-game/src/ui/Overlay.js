@@ -50,20 +50,24 @@ export default class Overlay {
 
   drawPause(ctx) {
     // Semi-transparent background
-    ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+    ctx.fillStyle = "rgba(2, 4, 10, 0.72)";
     ctx.fillRect(0, 0, this.game.width, this.game.height);
 
     // Text
+    ctx.fillStyle = "#7fe8ff";
+    ctx.font = "bold 16px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("TACTICAL PAUSE", this.game.width / 2, this.game.height / 2 - 28);
+
     ctx.fillStyle = "white";
     ctx.font = "bold 36px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("PAUSED", this.game.width / 2, this.game.height / 2);
+    ctx.fillText("Mission Frozen", this.game.width / 2, this.game.height / 2 + 10);
 
     ctx.font = "16px Arial";
     ctx.fillText(
-      "Press P to Resume",
+      "Press P to resume the fight",
       this.game.width / 2,
-      this.game.height / 2 + 50,
+      this.game.height / 2 + 52,
     );
 
     ctx.textAlign = "left";
