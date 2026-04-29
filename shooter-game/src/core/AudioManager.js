@@ -1,63 +1,49 @@
 /**
- * Audio manager - lightweight background music control.
+ * Audio manager - handles menu/game music playback states.
  */
 export default class AudioManager {
   constructor() {
-    this.audioContext = null;
-    this.masterGain = null;
-    this.musicGain = null;
-    this.oscA = null;
-    this.oscB = null;
+    this.gameMusic = null;
+    this.menuMusic = null;
+    this.gameRestartTimeout = null;
 
     this.musicEnabled = true;
     this.volume = 0.4;
     this.initialized = false;
+    this.mode = "menu";
+    this.loopDelayMs = 3000;
+
+    this.gameMusicSrc = new URL("../assets/gaming.mp3", import.meta.url).href;
+    this.menuMusicSrc = new URL("../assets/menu.mp3", import.meta.url).href;
   }
 
   async initFromUserGesture() {
     if (this.initialized) {
-      if (this.audioContext?.state === "suspended") {
-        await this.audioContext.resume();
+      return;
+    }
+
+    this.gameMusic = new Audio(this.gameMusicSrc);
+    this.gameMusic.preload = "auto";
+    this.gameMusic.loop = false;
+    this.gameMusic.volume = this.volume;
+
+    this.menuMusic = new Audio(this.menuMusicSrc);
+    this.menuMusic.preload = "auto";
+    this.menuMusic.loop = false;
+    this.menuMusic.volume = this.volume;
+
+    this.gameMusic.addEventListener("ended", () => {
+      if (!this.musicEnabled || this.mode !== "game") {
+        return;
       }
-      return;
-    }
 
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) {
-      return;
-    }
-
-    this.audioContext = new AudioCtx();
-
-    this.masterGain = this.audioContext.createGain();
-    this.masterGain.gain.value = 0.9;
-
-    this.musicGain = this.audioContext.createGain();
-    this.musicGain.gain.value = this.musicEnabled ? this.volume : 0;
-
-    this.oscA = this.audioContext.createOscillator();
-    this.oscA.type = "triangle";
-    this.oscA.frequency.value = 110;
-
-    this.oscB = this.audioContext.createOscillator();
-    this.oscB.type = "sine";
-    this.oscB.frequency.value = 164.81;
-
-    const oscAGain = this.audioContext.createGain();
-    oscAGain.gain.value = 0.12;
-
-    const oscBGain = this.audioContext.createGain();
-    oscBGain.gain.value = 0.08;
-
-    this.oscA.connect(oscAGain);
-    this.oscB.connect(oscBGain);
-    oscAGain.connect(this.musicGain);
-    oscBGain.connect(this.musicGain);
-    this.musicGain.connect(this.masterGain);
-    this.masterGain.connect(this.audioContext.destination);
-
-    this.oscA.start();
-    this.oscB.start();
+      this.clearGameRestartTimeout();
+      this.gameRestartTimeout = window.setTimeout(() => {
+        if (this.musicEnabled && this.mode === "game") {
+          this.playGameTrackFromStart();
+        }
+      }, this.loopDelayMs);
+    });
 
     this.initialized = true;
   }
@@ -67,31 +53,118 @@ export default class AudioManager {
 
     if (this.musicEnabled) {
       await this.initFromUserGesture();
-    }
-
-    if (!this.musicGain || !this.audioContext) {
+      this.syncWithCurrentMode();
       return;
     }
 
-    const target = this.musicEnabled ? this.volume : 0;
-    this.musicGain.gain.setTargetAtTime(
-      target,
-      this.audioContext.currentTime,
-      0.05,
-    );
+    this.clearGameRestartTimeout();
+    this.stopAudio(this.gameMusic, true);
+    this.stopAudio(this.menuMusic, true);
   }
 
   setVolume(volume) {
     this.volume = Math.max(0, Math.min(1, volume));
 
-    if (!this.musicGain || !this.audioContext || !this.musicEnabled) {
+    if (!this.initialized) {
       return;
     }
 
-    this.musicGain.gain.setTargetAtTime(
-      this.volume,
-      this.audioContext.currentTime,
-      0.05,
-    );
+    if (this.gameMusic) {
+      this.gameMusic.volume = this.volume;
+    }
+
+    if (this.menuMusic) {
+      this.menuMusic.volume = this.volume;
+    }
+  }
+
+  async enterGameMode() {
+    this.mode = "game";
+    await this.initFromUserGesture();
+
+    if (!this.musicEnabled) {
+      return;
+    }
+
+    this.clearGameRestartTimeout();
+    this.stopAudio(this.menuMusic, true);
+
+    if (this.gameMusic?.paused) {
+      this.playGameTrackFromStart();
+    }
+  }
+
+  async enterMenuMode() {
+    this.mode = "menu";
+    await this.initFromUserGesture();
+
+    this.clearGameRestartTimeout();
+    this.stopAudio(this.gameMusic, true);
+
+    if (!this.musicEnabled) {
+      return;
+    }
+
+    // One-shot menu/pause music (no loop).
+    this.stopAudio(this.menuMusic, true);
+    this.playAudio(this.menuMusic);
+  }
+
+  syncWithCurrentMode() {
+    if (!this.initialized || !this.musicEnabled) {
+      return;
+    }
+
+    if (this.mode === "game") {
+      this.clearGameRestartTimeout();
+      this.stopAudio(this.menuMusic, true);
+      if (this.gameMusic?.paused) {
+        this.playGameTrackFromStart();
+      }
+      return;
+    }
+
+    this.stopAudio(this.gameMusic, true);
+    this.stopAudio(this.menuMusic, true);
+    this.playAudio(this.menuMusic);
+  }
+
+  playGameTrackFromStart() {
+    if (!this.gameMusic) {
+      return;
+    }
+
+    this.gameMusic.currentTime = 0;
+    this.playAudio(this.gameMusic);
+  }
+
+  playAudio(audio) {
+    if (!audio) {
+      return;
+    }
+
+    audio.play().catch(() => {
+      // Ignore autoplay interruptions; next user gesture will retry.
+    });
+  }
+
+  stopAudio(audio, resetTime = false) {
+    if (!audio) {
+      return;
+    }
+
+    audio.pause();
+    if (resetTime) {
+      audio.currentTime = 0;
+    }
+  }
+
+  clearGameRestartTimeout() {
+    if (!this.gameRestartTimeout) {
+      return;
+    }
+
+    window.clearTimeout(this.gameRestartTimeout);
+    this.gameRestartTimeout = null;
   }
 }

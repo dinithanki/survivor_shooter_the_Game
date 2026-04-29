@@ -43,7 +43,7 @@ export default class PowerUp {
     ctx.font = "bold 10px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(isSuper ? "S" : "B", this.x, this.y + 0.5);
+    ctx.fillText(isSuper ? "B" : "S", this.x, this.y + 0.5);
 
     ctx.restore();
   }

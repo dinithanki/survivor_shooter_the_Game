@@ -19,8 +19,8 @@ export default class Bullet {
     const nextX = this.x + Math.cos(this.angle) * this.speed * dt;
     const nextY = this.y + Math.sin(this.angle) * this.speed * dt;
 
-    // Check if bullet hits a wall
-    if (this.game && !this.game.map.isWalkable(nextX, nextY)) {
+    // Check the whole bullet path so fast shots cannot skip through walls.
+    if (this.game && !this.canTravelTo(nextX, nextY)) {
       this.dead = true;
       return;
     }
@@ -33,6 +33,25 @@ export default class Bullet {
     if (this.age > this.lifetime) {
       this.dead = true;
     }
+  }
+
+  canTravelTo(nextX, nextY) {
+    const dx = nextX - this.x;
+    const dy = nextY - this.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const steps = Math.max(1, Math.ceil(distance / Math.max(1, this.radius)));
+
+    for (let step = 1; step <= steps; step++) {
+      const t = step / steps;
+      const x = this.x + dx * t;
+      const y = this.y + dy * t;
+
+      if (!this.game.map.isCircleWalkable(x, y, this.radius)) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   draw(ctx) {

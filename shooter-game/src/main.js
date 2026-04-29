@@ -25,6 +25,28 @@ const volumeRange = document.getElementById("volume-range");
 const colorSwatches = document.querySelectorAll(".color-swatch");
 
 let menuContext = "intro";
+let hasPrimedAudio = false;
+
+async function ensureAudioReady() {
+  await audioManager.initFromUserGesture();
+  await audioManager.setMusicEnabled(musicToggle?.checked ?? true);
+  audioManager.setVolume(Number(volumeRange?.value || 40) / 100 || 0.4);
+}
+
+async function primeMenuAudioOnce() {
+  if (hasPrimedAudio) {
+    return;
+  }
+
+  hasPrimedAudio = true;
+  await ensureAudioReady();
+  await audioManager.enterMenuMode();
+}
+
+async function playMenuMusic() {
+  await ensureAudioReady();
+  await audioManager.enterMenuMode();
+}
 
 function setVisiblePanel(panel) {
   introMainPanel.classList.add("hidden");
@@ -37,27 +59,33 @@ function setVisiblePanel(panel) {
 function showIntroMain() {
   menuContext = "intro";
   setVisiblePanel(introMainPanel);
+  void playMenuMusic();
 }
 
 function showPausePanel() {
   menuContext = "pause";
   introScreen?.classList.remove("hidden");
   setVisiblePanel(pausePanel);
+  void playMenuMusic();
 }
 
 settingsBtn?.addEventListener("click", () => {
+  void primeMenuAudioOnce();
   setVisiblePanel(settingsPanel);
 });
 
 howtoBtn?.addEventListener("click", () => {
+  void primeMenuAudioOnce();
   setVisiblePanel(howtoPanel);
 });
 
 pauseSettingsBtn?.addEventListener("click", () => {
+  void ensureAudioReady();
   setVisiblePanel(settingsPanel);
 });
 
 pauseHowtoBtn?.addEventListener("click", () => {
+  void ensureAudioReady();
   setVisiblePanel(howtoPanel);
 });
 
@@ -92,11 +120,10 @@ pauseMainBtn?.addEventListener("click", () => {
 });
 
 startBtn?.addEventListener("click", async () => {
-  await audioManager.initFromUserGesture();
-  await audioManager.setMusicEnabled(musicToggle?.checked ?? true);
-  audioManager.setVolume(Number(volumeRange?.value || 40) / 100 || 0.4);
+  await ensureAudioReady();
 
   introScreen?.classList.add("hidden");
+  await audioManager.enterGameMode();
   game.beginGame();
 });
 
@@ -124,8 +151,25 @@ game.setPauseChangeHandler((isPaused) => {
   }
 
   if (game.hasStarted) {
+    void audioManager.enterGameMode();
     introScreen?.classList.add("hidden");
   }
 });
+
+document.addEventListener(
+  "pointerdown",
+  () => {
+    void primeMenuAudioOnce();
+  },
+  { once: true },
+);
+
+document.addEventListener(
+  "keydown",
+  () => {
+    void primeMenuAudioOnce();
+  },
+  { once: true },
+);
 
 game.start();

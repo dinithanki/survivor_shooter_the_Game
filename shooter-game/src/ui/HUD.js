@@ -6,14 +6,66 @@ export default class HUD {
     this.game = game;
     this.fontSize = 16;
     this.padding = 10;
+    this.levelUpMessage = null;
+    this.levelUpTimer = 0;
+    this.levelUpDuration = 2; // Show for 2 seconds
+    this.lastWave = 0;
   }
 
   draw(ctx) {
+    this.updateLevelUp();
     this.drawHealth(ctx);
     this.drawScore(ctx);
     this.drawWave(ctx);
     this.drawPowerUps(ctx);
+    this.drawLevelUpMessage(ctx);
     this.drawFPS(ctx);
+  }
+
+  updateLevelUp() {
+    const currentWave = this.game.waveSystem.currentWave;
+    if (currentWave > this.lastWave && currentWave > 1) {
+      this.levelUpMessage = `LEVEL UP - WAVE ${currentWave}`;
+      this.levelUpTimer = 0;
+      this.lastWave = currentWave;
+    }
+
+    if (this.levelUpMessage) {
+      this.levelUpTimer += this.game.time.deltaTime;
+      if (this.levelUpTimer > this.levelUpDuration) {
+        this.levelUpMessage = null;
+      }
+    }
+  }
+
+  drawLevelUpMessage(ctx) {
+    if (!this.levelUpMessage) return;
+
+    const x = this.game.width / 2;
+    const y = this.game.height / 2;
+
+    // Calculate alpha fade effect
+    const alpha = Math.max(0, 1 - this.levelUpTimer / this.levelUpDuration);
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    // Background
+    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+    ctx.fillRect(x - 150, y - 40, 300, 80);
+
+    // Border
+    ctx.strokeStyle = "#FFD700";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x - 150, y - 40, 300, 80);
+
+    // Text
+    ctx.fillStyle = "#FFD700";
+    ctx.font = "bold 32px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(this.levelUpMessage, x, y + 10);
+
+    ctx.restore();
   }
 
   drawHealth(ctx) {
