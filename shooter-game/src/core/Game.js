@@ -15,6 +15,7 @@ import DamageSystem from "../systems/DamageSystem.js";
 
 // Map and UI
 import Map from "../map/Map.js";
+import MAP_PRESETS from "../map/MapPresets.js";
 import HUD from "../ui/HUD.js";
 import Overlay from "../ui/Overlay.js";
 import Menu from "../ui/Menu.js";
@@ -61,11 +62,15 @@ export default class Game {
     this.nextSuperPowerUpScore = 180;
     this.nextShieldPowerUpScore = 280;
 
+    // Death flash effect (visible when player dies)
+    this.deathFlashTimer = 0;
+    this.deathFlashDuration = 0.9; // seconds
+
     this.settings = {
       playerColor: "dodgerblue",
     };
     this.onPauseChange = null;
-    this.mapPresets = ["cross", "maze", "diamond", "grid", "spiral", "default"];
+    this.mapPresets = MAP_PRESETS;
     this.mapPresetIndex = 0;
 
     // Game systems
@@ -81,6 +86,11 @@ export default class Game {
     this.hud = new HUD(this);
     this.overlay = new Overlay(this);
     this.menu = new Menu(this);
+
+    // callback used by DamageSystem to trigger death visual
+    this.onPlayerDeath = () => {
+      this.deathFlashTimer = this.deathFlashDuration;
+    };
 
     this.handleResize = this.handleResize.bind(this);
     window.addEventListener("resize", this.handleResize);
@@ -193,6 +203,11 @@ export default class Game {
     this.time.update();
     const dt = this.time.deltaTime;
 
+    // Always update short-lived visual timers (like death flash)
+    if (this.deathFlashTimer > 0) {
+      this.deathFlashTimer = Math.max(0, this.deathFlashTimer - dt);
+    }
+
     if (this.isGameOver) {
       return;
     }
@@ -250,8 +265,21 @@ export default class Game {
     this.hud.draw(this.ctx);
 
     // Draw overlays
+    // Death flash effect (red blink) drawn under overlays so message remains readable
+    if (this.deathFlashTimer > 0) {
+      const progress = 1 - this.deathFlashTimer / this.deathFlashDuration; // 0 -> 1
+      const flashes = 6; // number of pulses
+      const alpha = Math.abs(Math.sin(progress * Math.PI * flashes)) * 0.7; // pulsing alpha
+      this.ctx.save();
+      this.ctx.fillStyle = `rgba(200,20,30,${alpha.toFixed(3)})`;
+      this.ctx.fillRect(0, 0, this.width, this.height);
+      this.ctx.restore();
+    }
+
     if (this.isGameOver) {
       this.overlay.show("gameOver");
+    } else if (this.isPaused) {
+      this.overlay.show("pause");
     } else {
       this.overlay.hide();
     }

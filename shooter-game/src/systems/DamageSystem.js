@@ -15,7 +15,16 @@ export default class DamageSystem {
 
     // Game over condition
     if (player.hp <= 0) {
-      this.game.isGameOver = true;
+      if (!this.game.isGameOver) {
+        this.game.isGameOver = true;
+        // trigger a short red flash effect on death
+        if (typeof this.game.onPlayerDeath === "function") {
+          this.game.onPlayerDeath();
+        } else {
+          // fallback: directly set flash timer
+          this.game.deathFlashTimer = this.game.deathFlashDuration || 0.9;
+        }
+      }
     }
   }
 

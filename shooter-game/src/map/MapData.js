@@ -284,6 +284,146 @@ export default class MapData {
       return map;
     }
 
+    // Preset: Ring lanes around the center
+    if (preset === "rings") {
+      const map = [];
+      const cx = Math.floor(this.width / 2);
+      const cy = Math.floor(this.height / 2);
+      for (let y = 0; y < this.height; y++) {
+        map[y] = [];
+        for (let x = 0; x < this.width; x++) {
+          const dx = x - cx;
+          const dy = y - cy;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          map[y][x] = Math.round(dist) % 5 === 0 ? "stone" : "grass";
+        }
+      }
+      for (let y = cy - 2; y <= cy + 2; y++) {
+        for (let x = cx - 2; x <= cx + 2; x++) {
+          if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+            map[y][x] = "grass";
+          }
+        }
+      }
+      for (let x = 1; x < this.width - 1; x++) {
+        map[cy][x] = "grass";
+      }
+      for (let y = 1; y < this.height - 1; y++) {
+        map[y][cx] = "grass";
+      }
+      addBorder(map);
+      return map;
+    }
+
+    // Preset: Long combat corridors
+    if (preset === "corridors") {
+      const map = [];
+      const cx = Math.floor(this.width / 2);
+      const cy = Math.floor(this.height / 2);
+      for (let y = 0; y < this.height; y++) {
+        map[y] = [];
+        for (let x = 0; x < this.width; x++) {
+          const verticalWall = x % 5 === 0 && Math.abs(y - cy) > 1;
+          const horizontalWall = y % 6 === 0 && Math.abs(x - cx) > 1;
+          map[y][x] = verticalWall || horizontalWall ? "stone" : "grass";
+        }
+      }
+      for (let y = cy - 2; y <= cy + 2; y++) {
+        for (let x = cx - 2; x <= cx + 2; x++) {
+          if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+            map[y][x] = "grass";
+          }
+        }
+      }
+      addBorder(map);
+      return map;
+    }
+
+    // Preset: Water islands with walkable bridges
+    if (preset === "islands") {
+      const map = [];
+      const cx = Math.floor(this.width / 2);
+      const cy = Math.floor(this.height / 2);
+      for (let y = 0; y < this.height; y++) {
+        map[y] = [];
+        for (let x = 0; x < this.width; x++) {
+          const island =
+            Math.abs(x - cx) + Math.abs(y - cy) < 6 ||
+            (x < this.width * 0.35 && y < this.height * 0.35) ||
+            (x > this.width * 0.65 && y < this.height * 0.35) ||
+            (x < this.width * 0.35 && y > this.height * 0.65) ||
+            (x > this.width * 0.65 && y > this.height * 0.65);
+          map[y][x] = island ? "grass" : "water";
+        }
+      }
+      for (let x = 1; x < this.width - 1; x++) {
+        map[cy][x] = "grass";
+      }
+      for (let y = 1; y < this.height - 1; y++) {
+        map[y][cx] = "grass";
+      }
+      addBorder(map);
+      return map;
+    }
+
+    // Preset: Fort walls with four open gates
+    if (preset === "fortress") {
+      const map = [];
+      const left = Math.floor(this.width * 0.25);
+      const right = Math.floor(this.width * 0.75);
+      const top = Math.floor(this.height * 0.25);
+      const bottom = Math.floor(this.height * 0.75);
+      const cx = Math.floor(this.width / 2);
+      const cy = Math.floor(this.height / 2);
+      for (let y = 0; y < this.height; y++) {
+        map[y] = [];
+        for (let x = 0; x < this.width; x++) {
+          const onWall = x === left || x === right || y === top || y === bottom;
+          const gate = Math.abs(x - cx) <= 2 || Math.abs(y - cy) <= 2;
+          map[y][x] = onWall && !gate ? "stone" : "grass";
+        }
+      }
+      addBorder(map);
+      return map;
+    }
+
+    // Preset: Diagonal zigzag barriers
+    if (preset === "zigzag") {
+      const map = [];
+      const cx = Math.floor(this.width / 2);
+      const cy = Math.floor(this.height / 2);
+      for (let y = 0; y < this.height; y++) {
+        map[y] = [];
+        for (let x = 0; x < this.width; x++) {
+          const wave = Math.floor((x + y * 2) / 5) % 4 === 0;
+          const centerClear = Math.abs(x - cx) <= 3 && Math.abs(y - cy) <= 3;
+          map[y][x] = wave && !centerClear ? "stone" : "grass";
+        }
+      }
+      for (let x = 1; x < this.width - 1; x++) {
+        map[cy][x] = "grass";
+      }
+      addBorder(map);
+      return map;
+    }
+
+    // Preset: Narrow canyon through rocky sides
+    if (preset === "canyon") {
+      const map = [];
+      const cx = Math.floor(this.width / 2);
+      const cy = Math.floor(this.height / 2);
+      for (let y = 0; y < this.height; y++) {
+        map[y] = [];
+        for (let x = 0; x < this.width; x++) {
+          const pathCenter = cx + Math.round(Math.sin(y * 0.7) * 3);
+          const inPath = Math.abs(x - pathCenter) <= 3 || Math.abs(y - cy) <= 2;
+          map[y][x] = inPath ? "grass" : "stone";
+        }
+      }
+      addBorder(map);
+      return map;
+    }
+
     // default: random generation
     const map = [];
     for (let y = 0; y < this.height; y++) {
@@ -296,7 +436,7 @@ export default class MapData {
           type = "water";
         } else if (rand < 0.3) {
           type = "stone";
-        } else if (rand < 0.05) {
+        } else if (rand < 0.38) {
           type = "forest";
         }
 
