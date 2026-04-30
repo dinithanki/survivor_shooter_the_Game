@@ -17,6 +17,7 @@ export default class HUD {
     this.drawHealth(ctx);
     this.drawScore(ctx);
     this.drawWave(ctx);
+    this.drawMatchTimer(ctx);
     this.drawPowerUps(ctx);
     this.drawLevelUpMessage(ctx);
     this.drawFPS(ctx);
@@ -116,6 +117,21 @@ export default class HUD {
       y,
     );
     ctx.textAlign = "left";
+  }
+
+  drawMatchTimer(ctx) {
+    if (this.game.mode !== "multi" || !this.game.hasStarted) {
+      return;
+    }
+
+    const minutes = Math.floor(this.game.matchTimerRemaining / 60);
+    const seconds = Math.floor(this.game.matchTimerRemaining % 60)
+      .toString()
+      .padStart(2, "0");
+
+    ctx.fillStyle = this.game.matchTimerRemaining <= 30 ? "#ff8a3d" : "white";
+    ctx.font = "bold 16px Arial";
+    ctx.fillText(`Time: ${minutes}:${seconds}`, this.game.width / 2, this.padding + 42);
   }
 
   drawFPS(ctx) {

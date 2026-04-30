@@ -103,6 +103,7 @@ export default class Player {
 
     const totalShots = Math.max(1, this.shotCount);
     const mid = (totalShots - 1) / 2;
+    const bullets = [];
     for (let i = 0; i < totalShots; i++) {
       const spreadOffset = (i - mid) * this.spreadAngle;
       const bullet = new Bullet(
@@ -112,12 +113,15 @@ export default class Player {
         "player",
         targetGame,
       );
+      bullet.ownerId = targetGame.playerId;
       bullet.damage = targetGame.isSuperBulletsActive() ? 3 : 1;
       bullet.radius = targetGame.isSuperBulletsActive() ? 5 : 4;
       this.game.bullets.push(bullet);
+      bullets.push(bullet);
     }
 
     this.shootCooldown = this.shootRate;
+    return bullets;
   }
 
   takeDamage(amount) {

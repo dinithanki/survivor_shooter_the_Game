@@ -1,5 +1,6 @@
 import { distance, normalize } from "../utils/math.js";
 import Bullet from "./Bullet.js";
+import { random } from "../utils/random.js";
 
 /**
  * Enemy entity - pursues and attacks the player
@@ -63,7 +64,7 @@ export default class Enemy {
         this.stoppingDistance = 180; // hold at medium range
         this.baseHp = 3;
     }
-    this.shootCooldown = Math.random() * this.shootRate; // random initial cooldown
+    this.shootCooldown = random(0, this.shootRate); // random initial cooldown
   }
 
   applyDifficultyScaling(difficultyScale) {
@@ -77,9 +78,29 @@ export default class Enemy {
   }
 
   update(player, dt) {
+    const targetPlayer = Array.isArray(player)
+      ? player.reduce((closest, candidate) => {
+          if (!candidate) return closest;
+          if (!closest) return candidate;
+
+          const candidateDistance =
+            (candidate.x - this.x) * (candidate.x - this.x) +
+            (candidate.y - this.y) * (candidate.y - this.y);
+          const closestDistance =
+            (closest.x - this.x) * (closest.x - this.x) +
+            (closest.y - this.y) * (closest.y - this.y);
+
+          return candidateDistance < closestDistance ? candidate : closest;
+        }, null)
+      : player;
+
+    if (!targetPlayer) {
+      return;
+    }
+
     // Calculate direction to player
-    const dx = player.x - this.x;
-    const dy = player.y - this.y;
+    const dx = targetPlayer.x - this.x;
+    const dy = targetPlayer.y - this.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
 
     if (dist > 0) {

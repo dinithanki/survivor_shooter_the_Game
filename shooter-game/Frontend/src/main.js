@@ -29,9 +29,14 @@ const lobbyBackBtn = document.getElementById("lobby-back-btn");
 const lobbySubtitle = document.querySelector(
   "#lobby-panel .intro-subtitle-compact",
 );
+const roomNameInput = document.getElementById("room-name-input");
+const roomMapSelect = document.getElementById("room-map-select");
+const roomTimeSelect = document.getElementById("room-time-select");
 const roomRoleLabel = document.getElementById("room-role-label");
 const roomCodeInput = document.getElementById("room-code-input");
 const copyRoomCodeBtn = document.getElementById("copy-room-code-btn");
+const copyRoomCodeFeedback = document.getElementById("copy-room-code-feedback");
+const roomFullWarning = document.getElementById("room-full-warning");
 const roomStatusText = document.getElementById("room-status-text");
 const lobbyPlayerCount = document.getElementById("lobby-player-count");
 const lobbyPlayerItems = document.getElementById("lobby-player-items");
@@ -101,13 +106,73 @@ function showLobby() {
 }
 
 function setLobbyStatus(message) {
-  if (lobbySubtitle) {
-    lobbySubtitle.textContent = message;
-  }
-
   if (roomStatusText) {
     roomStatusText.textContent = message;
   }
+}
+
+function setCopyFeedback(message) {
+  if (copyRoomCodeFeedback) {
+    copyRoomCodeFeedback.textContent = message;
+  }
+}
+
+function setRoomFullWarning(isVisible) {
+  roomFullWarning?.classList.toggle("hidden", !isVisible);
+}
+
+function populateRoomSettings() {
+  if (roomMapSelect && roomMapSelect.childElementCount === 0) {
+    MAP_PRESETS.forEach((preset) => {
+      const option = document.createElement("option");
+      option.value = preset;
+      option.textContent = preset;
+      roomMapSelect.appendChild(option);
+    });
+  }
+
+  if (roomTimeSelect && roomTimeSelect.childElementCount === 0) {
+    for (let minutes = 1; minutes <= 10; minutes++) {
+      const option = document.createElement("option");
+      option.value = String(minutes);
+      option.textContent = `${minutes} minute${minutes === 1 ? "" : "s"}`;
+      roomTimeSelect.appendChild(option);
+    }
+  }
+}
+
+function applyRoomSettingsToUI(settings = {}) {
+  if (roomNameInput) {
+    roomNameInput.value = settings.roomName || roomNameInput.value || "";
+  }
+
+  if (roomMapSelect && settings.mapPreset) {
+    roomMapSelect.value = settings.mapPreset;
+  }
+
+  if (roomTimeSelect && settings.durationMinutes) {
+    roomTimeSelect.value = String(Math.min(10, Math.max(1, settings.durationMinutes)));
+  }
+}
+
+function currentRoomSettings() {
+  return {
+    roomName: roomNameInput?.value?.trim() || "",
+    mapPreset: roomMapSelect?.value || "default",
+    durationMinutes: Number(roomTimeSelect?.value || 10),
+  };
+}
+
+function flashCopyGlow() {
+  if (!copyRoomCodeBtn) {
+    return;
+  }
+
+  copyRoomCodeBtn.classList.add("copy-glow");
+  window.clearTimeout(copyRoomCodeBtn._copyGlowTimeout);
+  copyRoomCodeBtn._copyGlowTimeout = window.setTimeout(() => {
+    copyRoomCodeBtn.classList.remove("copy-glow");
+  }, 1400);
 }
 
 function renderLobbyPlayers(players = []) {
@@ -121,16 +186,30 @@ function renderLobbyPlayers(players = []) {
   players.forEach((player, index) => {
     const item = document.createElement("li");
     const name = document.createElement("strong");
-    name.textContent =
-      player.id === network.hostId
-        ? `Player ${index + 1} (Admin)`
-        : `Player ${index + 1}`;
+    const isHost = player.id === network.hostId;
+    name.textContent = isHost ? "Admin" : `Player ${index + 1}`;
 
     const meta = document.createElement("span");
     meta.className = "lobby-player-tag";
-    meta.textContent = player.id === network.hostId ? "Host" : "Joined";
+    meta.textContent = isHost ? "Host" : "Joined";
 
-    item.append(name, meta);
+    const actions = document.createElement("div");
+    actions.className = "lobby-player-actions";
+
+    actions.append(name, meta);
+
+    if (network.isHost && !isHost) {
+      const kickButton = document.createElement("button");
+      kickButton.type = "button";
+      kickButton.className = "intro-btn kick-player-btn";
+      kickButton.textContent = "Kick";
+      kickButton.addEventListener("click", () => {
+        network.kickPlayer(player.id);
+      });
+      actions.appendChild(kickButton);
+    }
+
+    item.append(actions);
     lobbyPlayerItems.appendChild(item);
   });
 }
@@ -147,7 +226,40 @@ function setLobbyRoomState(roomId, isHost) {
   if (deleteRoomBtn) {
     deleteRoomBtn.classList.toggle("hidden", !isHost);
   }
+
+  if (roomNameInput) roomNameInput.disabled = !isHost;
+  if (roomMapSelect) roomMapSelect.disabled = !isHost;
+  if (roomTimeSelect) roomTimeSelect.disabled = !isHost;
 }
+
+function updateStartButton(playersCount, isHost, started) {
+  if (!createGameBtn) {
+    return;
+  }
+
+  if (!isHost) {
+    createGameBtn.textContent = "Create Room";
+    createGameBtn.disabled = false;
+    return;
+  }
+
+  if (started) {
+    createGameBtn.textContent = "Game Started";
+    createGameBtn.disabled = true;
+    return;
+  }
+
+  if (playersCount >= 2) {
+    createGameBtn.textContent = "Start Game";
+    createGameBtn.disabled = false;
+    return;
+  }
+
+  createGameBtn.textContent = "Waiting for Players...";
+  createGameBtn.disabled = true;
+}
+
+populateRoomSettings();
 
 function showPausePanel() {
   menuContext = "pause";
@@ -317,6 +429,21 @@ createGameBtn?.addEventListener("click", () => {
   }
 });
 
+roomNameInput?.addEventListener("input", () => {
+  if (!network.isHost) return;
+  network.updateRoomSettings(currentRoomSettings());
+});
+
+roomMapSelect?.addEventListener("change", () => {
+  if (!network.isHost) return;
+  network.updateRoomSettings(currentRoomSettings());
+});
+
+roomTimeSelect?.addEventListener("change", () => {
+  if (!network.isHost) return;
+  network.updateRoomSettings(currentRoomSettings());
+});
+
 joinGameBtn?.addEventListener("click", () => {
   const roomId = window.prompt("Enter room code");
   if (!roomId) {
@@ -336,9 +463,10 @@ copyRoomCodeBtn?.addEventListener("click", async () => {
 
   try {
     await navigator.clipboard.writeText(code);
-    setLobbyStatus(`Room code ${code} copied to clipboard.`);
+    setCopyFeedback(`Copied room code ${code}.`);
+    flashCopyGlow();
   } catch {
-    setLobbyStatus(`Room code: ${code}`);
+    setCopyFeedback(`Room code: ${code}`);
   }
 });
 
@@ -349,49 +477,64 @@ deleteRoomBtn?.addEventListener("click", () => {
 network.onRoomCreated = ({ roomId }) => {
   game.startMultiplayer(network, roomId);
   game.setRemotePlayers(network.getRemotePlayers());
+  game.setMultiplayerSettings(network.settings);
+  applyRoomSettingsToUI(network.settings);
   setLobbyRoomState(roomId, true);
   renderLobbyPlayers(network.getLobbyPlayers());
-  createGameBtn.textContent = "Start Game";
+  updateStartButton(1, true, false);
   joinGameBtn.textContent = "Join Room";
   deleteRoomBtn?.classList.remove("hidden");
   setLobbyStatus(
     `Room ${roomId} is ready. Share the code, then start the match.`,
   );
+  setCopyFeedback("Copy the room code to share it with friends.");
 };
 
 network.onRoomJoined = ({ roomId }) => {
   game.startMultiplayer(network, roomId);
   game.setRemotePlayers(network.getRemotePlayers());
+  game.setMultiplayerSettings(network.settings);
+  applyRoomSettingsToUI(network.settings);
   setLobbyRoomState(roomId, false);
   renderLobbyPlayers(network.getLobbyPlayers());
+  updateStartButton(network.getLobbyPlayers().length, false, false);
   setLobbyStatus(`Joined room ${roomId}. Waiting for the host to start.`);
+  setCopyFeedback("Ask the host for the room code if you need it again.");
 };
 
 network.onLobbyUpdate = ({ roomId, count, max, started, players, host }) => {
   game.setRemotePlayers(network.getRemotePlayers());
+  game.setMultiplayerSettings(network.settings);
+  applyRoomSettingsToUI(network.settings);
   setLobbyRoomState(roomId, network.isHost);
   renderLobbyPlayers(
     players ? Object.values(players) : network.getLobbyPlayers(),
   );
-  setLobbyStatus(
-    started
-      ? `Room ${roomId} is live.`
-      : `Room ${roomId}: ${count}/${max} players connected.`,
-  );
-
-  if (network.isHost && !started) {
-    createGameBtn.textContent = count > 1 ? "Start Game" : "Waiting...";
-    deleteRoomBtn?.classList.remove("hidden");
+  if (started) {
+    setLobbyStatus(`Room ${roomId} is live.`);
+  } else if (network.isHost) {
+    setLobbyStatus(
+      count <= 1
+        ? `Room ${roomId} is ready. Waiting for players...`
+        : `Room ${roomId} is ready. ${count}/${max} players in the lobby.`,
+    );
+  } else {
+    setLobbyStatus(`Joined room ${roomId}. Waiting for the host to start.`);
   }
 
-  if (!network.isHost) {
-    createGameBtn.textContent = "Create Game";
+  setRoomFullWarning(count >= max);
+
+  updateStartButton(count, network.isHost, started);
+  if (network.isHost) {
+    deleteRoomBtn?.classList.remove("hidden");
   }
   void host;
 };
 
 network.onPlayersUpdate = () => {
   game.setRemotePlayers(network.getRemotePlayers());
+  game.syncLocalPlayerStats(network.getLocalPlayerStats());
+  renderLobbyPlayers(network.getLobbyPlayers());
 };
 
 network.onPlayerShoot = (payload) => {
@@ -407,10 +550,30 @@ network.onWorldState = (state) => {
 network.onGameStarted = ({ roomId }) => {
   game.startMultiplayer(network, roomId);
   game.setRemotePlayers(network.getRemotePlayers());
+  game.setMultiplayerSettings(network.settings);
   game.beginGame();
   introScreen?.classList.add("hidden");
   void audioManager.enterGameMode();
   setLobbyStatus(`Battle started in room ${roomId}.`);
+};
+
+network.onRoomSettingsUpdated = ({ settings }) => {
+  game.setMultiplayerSettings(settings);
+  applyRoomSettingsToUI(settings);
+  if (network.isHost) {
+    setLobbyStatus(
+      `Room ${network.roomId} settings saved: ${settings.roomName || network.roomId}.`,
+    );
+  }
+};
+
+network.onMatchEnded = ({ result }) => {
+  game.applyMatchResult(result);
+  introScreen?.classList.remove("hidden");
+  setLobbyStatus(
+    `${result?.roomName || "Match"} ended. Winner: ${result?.winnerName || "Unknown"}.`,
+  );
+  setCopyFeedback("Create or join another room to play again.");
 };
 
 network.onRoomDeleted = ({ roomId }) => {
@@ -420,6 +583,21 @@ network.onRoomDeleted = ({ roomId }) => {
   setLobbyRoomState(null, false);
   renderLobbyPlayers([]);
   setLobbyStatus(`Room ${roomId} was deleted.`);
+  setCopyFeedback("Copy the room code to share it with friends.");
+  setRoomFullWarning(false);
+};
+
+network.onPlayerKicked = ({ playerId }) => {
+  if (playerId === network.socket.id) {
+    game.goToMainMenu();
+    introScreen?.classList.remove("hidden");
+    showIntroMain();
+    setLobbyRoomState(null, false);
+    renderLobbyPlayers([]);
+    setRoomFullWarning(false);
+    setCopyFeedback("Copy the room code to share it with friends.");
+    setLobbyStatus("You were removed from the room.");
+  }
 };
 
 network.onError = (message) => {
@@ -453,5 +631,20 @@ document.addEventListener(
   },
   { once: true },
 );
+
+document.addEventListener("keydown", (event) => {
+  const key = event.key.toLowerCase();
+  const activeTag = document.activeElement?.tagName?.toLowerCase();
+
+  if (["input", "textarea", "select"].includes(activeTag)) {
+    return;
+  }
+
+  if (key === "p" && game.hasStarted && !game.isGameOver) {
+    event.preventDefault();
+    game.togglePause();
+    return;
+  }
+});
 
 game.start();

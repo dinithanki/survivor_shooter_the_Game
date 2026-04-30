@@ -37,6 +37,9 @@ export default class CollisionSystem {
 
           if (enemy.dead) {
             this.game.score += enemy.points;
+            if (bullet.ownerId) {
+              this.game.registerKill(bullet.ownerId);
+            }
             // Create particles
             this.game.addParticles(enemy.x, enemy.y, 8);
             this.game.enemies.splice(j, 1);

@@ -42,6 +42,15 @@ export default class Game {
     this.isHost = false;
     this.playerId = null;
     this.pauseChangeHandler = null;
+    this.roomSettings = {
+      roomName: "",
+      mapPreset: "default",
+      durationMinutes: 10,
+    };
+    this.matchTimerRemaining = 0;
+    this.matchActive = false;
+    this.matchResult = null;
+    this.playerStats = { kills: 0, deaths: 0 };
 
     // Entities
     this.player = new Player(this.width / 2, this.height / 2, this);
@@ -95,8 +104,36 @@ export default class Game {
     console.log("Multiplayer mode started");
   }
 
+  setMultiplayerSettings(settings = {}) {
+    this.roomSettings = {
+      ...this.roomSettings,
+      ...settings,
+      durationMinutes: Math.max(1, Math.min(10, Number(settings.durationMinutes) || 10)),
+    };
+
+    if (this.roomSettings.mapPreset) {
+      this.selectedMapPreset = this.roomSettings.mapPreset;
+      this.map = new Map(this.width, this.height, this.selectedMapPreset);
+    }
+  }
+
+  getMatchDurationSeconds() {
+    return Math.max(60, Math.min(600, (this.roomSettings.durationMinutes || 10) * 60));
+  }
+
+  getRoomDisplayName() {
+    return this.roomSettings.roomName?.trim() || this.roomId || "Multiplayer Room";
+  }
+
   setRemotePlayers(players) {
     this.remotePlayers = players;
+  }
+
+  syncLocalPlayerStats(stats = {}) {
+    this.playerStats = {
+      kills: stats.kills ?? this.playerStats.kills,
+      deaths: stats.deaths ?? this.playerStats.deaths,
+    };
   }
 
   setPauseChangeHandler(handler) {
@@ -119,11 +156,19 @@ export default class Game {
     this.hasStarted = true;
     this.isGameOver = false;
     this.isPaused = false;
+    this.matchResult = null;
     this.overlay.hide();
     this.menu.close();
 
     if (!this.waveSystem) {
       this.waveSystem = new WaveSystem(this);
+    }
+
+    if (this.mode === "multi") {
+      this.setMultiplayerSettings(this.network?.settings || this.roomSettings);
+      this.matchTimerRemaining = this.getMatchDurationSeconds();
+      this.matchActive = true;
+      this.matchResult = null;
     }
 
     if (this.waveSystem.currentWave === 0) {
@@ -162,6 +207,111 @@ export default class Game {
 
   addParticles(x, y, count = 8) {
     this.particles.push(...Particle.createExplosion(x, y, count));
+  }
+
+  getSafeSpawnPoint(minDistanceFromPlayers = 140) {
+    const candidates = this.map.getWalkableTileCenters();
+    const players = this.getAllPlayers().filter(Boolean);
+    const enemies = this.enemies || [];
+
+    const safeCandidates = candidates.filter((point) => {
+      const playerClear = players.every((player) => {
+        const dx = player.x - point.x;
+        const dy = player.y - point.y;
+        return Math.sqrt(dx * dx + dy * dy) >= minDistanceFromPlayers;
+      });
+
+      const enemyClear = enemies.every((enemy) => {
+        const dx = enemy.x - point.x;
+        const dy = enemy.y - point.y;
+        return Math.sqrt(dx * dx + dy * dy) >= minDistanceFromPlayers * 0.8;
+      });
+
+      return playerClear && enemyClear;
+    });
+
+    const pool = safeCandidates.length > 0 ? safeCandidates : candidates;
+    if (pool.length === 0) {
+      return { x: this.width / 2, y: this.height / 2 };
+    }
+
+    const index = Math.floor(Math.random() * pool.length);
+    return pool[index];
+  }
+
+  respawnLocalPlayer() {
+    const spawnPoint = this.getSafeSpawnPoint();
+    this.player.x = spawnPoint.x;
+    this.player.y = spawnPoint.y;
+    this.player.hp = this.player.maxHp;
+    this.player.invulnerableTime = this.player.invulnerableDuration;
+    this.player.shootCooldown = 0;
+  }
+
+  handleMultiplayerDeath() {
+    this.playerStats.deaths += 1;
+    this.respawnLocalPlayer();
+
+    if (this.network) {
+      this.network.updatePlayerStats(this.network.socket.id, {
+        kills: this.playerStats.kills,
+        deaths: this.playerStats.deaths,
+      });
+    }
+  }
+
+  registerKill(playerId) {
+    if (!playerId) {
+      return;
+    }
+
+    const targetPlayer = this.network?.players?.[playerId];
+    if (!targetPlayer) {
+      return;
+    }
+
+    targetPlayer.kills = (targetPlayer.kills || 0) + 1;
+    if (this.network) {
+      this.network.updatePlayerStats(playerId, {
+        kills: targetPlayer.kills,
+        deaths: targetPlayer.deaths || 0,
+      });
+    }
+  }
+
+  getWinnerSummary() {
+    const entries = Object.values(this.network?.players || {}).filter(Boolean);
+    if (entries.length === 0) {
+      return null;
+    }
+
+    const ranking = [...entries].sort((a, b) => {
+      const killsDiff = (b.kills || 0) - (a.kills || 0);
+      if (killsDiff !== 0) return killsDiff;
+      return (a.deaths || 0) - (b.deaths || 0);
+    });
+
+    const winner = ranking[0];
+    return {
+      roomName: this.getRoomDisplayName(),
+      winnerId: winner.id,
+      winnerName: winner.id === this.playerId ? "You" : winner.id,
+      ranking,
+      reason: "Highest kills, lowest deaths",
+      timerExpired: true,
+    };
+  }
+
+  endMultiplayerMatch(result = null) {
+    this.matchActive = false;
+    this.hasStarted = false;
+    this.isGameOver = true;
+    this.matchResult = result || this.getWinnerSummary();
+    this.overlay.show("matchEnd");
+
+    if (this.network?.isHost) {
+      this.network.endMatch(this.matchResult);
+    }
   }
 
   collectPowerUp(powerUp) {
@@ -211,6 +361,7 @@ export default class Game {
     shotCount = 1,
     spreadAngle = 0.2,
     isSuper = false,
+    ownerId = null,
   }) {
     const totalShots = Math.max(1, shotCount);
     const mid = (totalShots - 1) / 2;
@@ -226,6 +377,7 @@ export default class Game {
         "player",
         this,
       );
+      bullet.ownerId = ownerId || this.playerId;
       bullet.damage = isSuper ? 3 : 1;
       bullet.radius = isSuper ? 5 : 4;
       this.bullets.push(bullet);
@@ -312,6 +464,8 @@ export default class Game {
         hp: this.player.hp,
         maxHp: this.player.maxHp,
         color: this.player.color,
+        kills: this.playerStats.kills,
+        deaths: this.playerStats.deaths,
       });
     }
 
@@ -325,7 +479,20 @@ export default class Game {
       this.damageSystem.update(dt);
     }
 
+    if (!this.isHost) {
+      this.collisionSystem.checkEnemyBulletPlayerCollision();
+      this.collisionSystem.checkEnemyPlayerCollision();
+      this.damageSystem.updatePlayerHealth();
+    }
+
     this.updateTimers(dt);
+
+    if (this.matchActive) {
+      this.matchTimerRemaining = Math.max(0, this.matchTimerRemaining - dt);
+      if (this.matchTimerRemaining <= 0 && this.isHost) {
+        this.endMultiplayerMatch();
+      }
+    }
 
     this.cleanup();
 
@@ -335,6 +502,8 @@ export default class Game {
         wave: this.waveSystem?.currentWave || 0,
         waveEnded: this.waveSystem?.waveEnded ?? true,
         selectedMapPreset: this.selectedMapPreset,
+        matchTimerRemaining: this.matchTimerRemaining,
+        roomName: this.getRoomDisplayName(),
         player: {
           x: this.player.x,
           y: this.player.y,
@@ -342,8 +511,10 @@ export default class Game {
           hp: this.player.hp,
           maxHp: this.player.maxHp,
           color: this.player.color,
+          kills: this.playerStats.kills,
+          deaths: this.playerStats.deaths,
         },
-        players: this.remotePlayers,
+        players: this.network?.players || this.remotePlayers,
         enemies: this.enemies.map((enemy) => ({
           x: enemy.x,
           y: enemy.y,
@@ -407,16 +578,33 @@ export default class Game {
       this.player.facingAngle = state.player.angle ?? this.player.facingAngle;
       this.player.hp = state.player.hp ?? this.player.hp;
       this.player.maxHp = state.player.maxHp ?? this.player.maxHp;
+      this.playerStats.kills = state.player.kills ?? this.playerStats.kills;
+      this.playerStats.deaths = state.player.deaths ?? this.playerStats.deaths;
       if (state.player.color) {
         this.player.color = state.player.color;
       }
     }
 
-    this.remotePlayers = state.players || this.remotePlayers;
+    const remotePlayers = state.players || {};
+    this.remotePlayers = Object.fromEntries(
+      Object.entries(remotePlayers).filter(([id]) => id !== this.playerId),
+    );
 
     if (this.waveSystem) {
       this.waveSystem.currentWave = state.wave ?? this.waveSystem.currentWave;
       this.waveSystem.waveEnded = state.waveEnded ?? this.waveSystem.waveEnded;
+    }
+
+    if (state.matchTimerRemaining !== undefined) {
+      this.matchTimerRemaining = state.matchTimerRemaining;
+    }
+
+    if (state.roomName) {
+      this.roomSettings.roomName = state.roomName;
+    }
+
+    if (state.selectedMapPreset) {
+      this.roomSettings.mapPreset = state.selectedMapPreset;
     }
 
     this.enemies = (state.enemies || []).map((enemyData) => {
@@ -469,6 +657,14 @@ export default class Game {
       powerUp.lifetime = powerUpData.lifetime ?? powerUp.lifetime;
       return powerUp;
     });
+  }
+
+  applyMatchResult(result) {
+    this.matchResult = result;
+    this.matchActive = false;
+    this.hasStarted = false;
+    this.isGameOver = true;
+    this.overlay.show("matchEnd");
   }
 
   cleanup() {
@@ -533,6 +729,7 @@ export default class Game {
   }
 
   restart() {
+    const wasMultiplayer = this.mode === "multi";
     this.player = new Player(this.width / 2, this.height / 2, this);
     this.enemies = [];
     this.bullets = [];
@@ -541,10 +738,29 @@ export default class Game {
     this.score = 0;
     this.superBulletTimer = 0;
     this.shieldTimer = 0;
+    this.isGameOver = false;
+    this.isPaused = false;
+    this.matchTimerRemaining = 0;
+    this.matchActive = false;
+    this.matchResult = null;
+    this.playerStats = { kills: 0, deaths: 0 };
+    this.overlay.hide();
+    this.menu.close();
+
+    if (this.waveSystem) {
+      this.waveSystem.currentWave = 0;
+      this.waveSystem.waveEnded = true;
+    }
 
     if (this.mode === "single") {
       this.waveSystem = new WaveSystem(this);
       this.waveSystem.startWave();
+      this.hasStarted = true;
+      return;
+    }
+
+    if (wasMultiplayer && this.network?.isHost) {
+      this.hasStarted = true;
     }
   }
 }

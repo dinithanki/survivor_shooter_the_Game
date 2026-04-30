@@ -2,7 +2,7 @@
  * Wave system - handles enemy spawning in waves
  */
 import Enemy from "../entities/Enemy.js";
-import { randomInt } from "../utils/random.js";
+import { random, randomInt } from "../utils/random.js";
 
 export default class WaveSystem {
   constructor(game) {
@@ -88,7 +88,7 @@ export default class WaveSystem {
     let type = "basic";
     const tankChance = Math.min(0.22, 0.01 + (this.currentWave - 1) * 0.012);
     const fastChance = Math.min(0.45, 0.2 + this.currentWave * 0.02);
-    const roll = Math.random();
+    const roll = random();
 
     if (roll < tankChance) {
       type = "tank";

@@ -429,7 +429,7 @@ export default class MapData {
     for (let y = 0; y < this.height; y++) {
       map[y] = [];
       for (let x = 0; x < this.width; x++) {
-        const rand = Math.random();
+        const rand = random();
         let type = "grass";
 
         if (rand < 0.15) {

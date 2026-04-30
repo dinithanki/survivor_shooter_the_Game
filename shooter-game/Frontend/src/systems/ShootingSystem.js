@@ -22,20 +22,41 @@ export default class ShootingSystem {
   playerShoot(dt) {
     const player = this.game.player;
     if (player.canShoot()) {
-      player.shoot(this.game);
+      const bullets = player.shoot(this.game);
+
+      if (this.game.mode === "multi" && this.game.network) {
+        this.game.network.sendPlayerShoot({
+          x: player.x,
+          y: player.y,
+          angle: player.facingAngle,
+          shotCount: player.shotCount,
+          spreadAngle: player.spreadAngle,
+          isSuper: this.game.isSuperBulletsActive(),
+          ownerId: this.game.playerId,
+        });
+      }
+
+      return bullets;
     }
   }
 
   updateEnemyShooting(dt) {
+    const targets = this.game.getAllPlayers();
+
     for (const enemy of this.game.enemies) {
-      // Calculate distance to player
-      const dx = this.game.player.x - enemy.x;
-      const dy = this.game.player.y - enemy.y;
+      const target = this.game.getNearestPlayer(enemy.x, enemy.y, targets);
+      if (!target) {
+        continue;
+      }
+
+      // Calculate distance to the nearest player
+      const dx = target.x - enemy.x;
+      const dy = target.y - enemy.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
 
       // Check if enemy can shoot and is in range
       if (enemy.canShoot(dist)) {
-        const bullet = enemy.shoot(this.game.player);
+        const bullet = enemy.shoot(target);
         this.game.bullets.push(bullet);
       }
     }

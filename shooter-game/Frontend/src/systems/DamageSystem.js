@@ -15,6 +15,11 @@ export default class DamageSystem {
 
     // Game over condition
     if (player.hp <= 0) {
+      if (this.game.mode === "multi") {
+        this.game.handleMultiplayerDeath();
+        return;
+      }
+
       if (!this.game.isGameOver) {
         this.game.isGameOver = true;
         // trigger a short red flash effect on death
