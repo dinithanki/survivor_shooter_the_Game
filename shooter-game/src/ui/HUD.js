@@ -76,21 +76,21 @@ export default class HUD {
     // Label
     ctx.fillStyle = "white";
     ctx.font = "bold 16px Arial";
-    ctx.fillText("HP:", x, y);
+    ctx.fillText("Health:", x, y);
 
     // Health bar background
     ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-    ctx.fillRect(x + 40, y - 15, 100, 20);
+    ctx.fillRect(x + 80, y - 15, 120, 20);
 
     // Health bar
     const healthPercent = Math.max(0, player.hp / player.maxHp);
     ctx.fillStyle = healthPercent > 0.3 ? "lime" : "red";
-    ctx.fillRect(x + 40, y - 15, 100 * healthPercent, 20);
+    ctx.fillRect(x + 80, y - 15, 120 * healthPercent, 20);
 
     // Health text (as percentage * 10)
     ctx.fillStyle = "white";
     const healthPercentage = Math.ceil((player.hp / player.maxHp) * 100);
-    ctx.fillText(healthPercentage + "%", x + 150, y);
+    ctx.fillText(healthPercentage + "%", x + 210, y);
   }
 
   drawScore(ctx) {
