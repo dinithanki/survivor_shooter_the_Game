@@ -11,16 +11,19 @@ const introMainPanel = document.getElementById("intro-main-panel");
 const settingsPanel = document.getElementById("settings-panel");
 const howtoPanel = document.getElementById("howto-panel");
 const mapsPanel = document.getElementById("maps-panel");
+const lobbyPanel = document.getElementById("lobby-panel");
 const pausePanel = document.getElementById("pause-panel");
 const mapGallery = document.getElementById("map-gallery");
 
 const startBtn = document.getElementById("start-btn");
+const multiplayerBtn = document.getElementById("multiplayer-btn");
 const settingsBtn = document.getElementById("settings-btn");
 const mapsBtn = document.getElementById("maps-btn");
 const howtoBtn = document.getElementById("howto-btn");
 const settingsBackBtn = document.getElementById("settings-back-btn");
 const mapsBackBtn = document.getElementById("maps-back-btn");
 const howtoBackBtn = document.getElementById("howto-back-btn");
+const lobbyBackBtn = document.getElementById("lobby-back-btn");
 const resumeBtn = document.getElementById("resume-btn");
 const pauseSettingsBtn = document.getElementById("pause-settings-btn");
 const pauseMapsBtn = document.getElementById("pause-maps-btn");
@@ -30,6 +33,8 @@ const pauseMainBtn = document.getElementById("pause-main-btn");
 const musicToggle = document.getElementById("music-toggle");
 const volumeRange = document.getElementById("volume-range");
 const colorSwatches = document.querySelectorAll(".color-swatch");
+const createGameBtn = document.getElementById("create-game-btn");
+const joinGameBtn = document.getElementById("join-game-btn");
 
 let menuContext = "intro";
 let hasPrimedAudio = false;
@@ -67,6 +72,7 @@ function setVisiblePanel(panel) {
   settingsPanel.classList.add("hidden");
   howtoPanel.classList.add("hidden");
   mapsPanel.classList.add("hidden");
+  lobbyPanel.classList.add("hidden");
   pausePanel.classList.add("hidden");
   panel.classList.remove("hidden");
 }
@@ -75,6 +81,11 @@ function showIntroMain() {
   menuContext = "intro";
   setVisiblePanel(introMainPanel);
   void playMenuMusic();
+}
+
+function showLobby() {
+  void primeMenuAudioOnce();
+  setVisiblePanel(lobbyPanel);
 }
 
 function showPausePanel() {
@@ -150,6 +161,8 @@ howtoBtn?.addEventListener("click", () => {
   setVisiblePanel(howtoPanel);
 });
 
+multiplayerBtn?.addEventListener("click", showLobby);
+
 mapsBtn?.addEventListener("click", showMapsPanel);
 
 pauseSettingsBtn?.addEventListener("click", () => {
@@ -175,6 +188,10 @@ settingsBackBtn?.addEventListener("click", () => {
 
 howtoBackBtn?.addEventListener("click", () => {
   setVisiblePanel(getBackPanel());
+});
+
+lobbyBackBtn?.addEventListener("click", () => {
+  showIntroMain();
 });
 
 mapsBackBtn?.addEventListener("click", () => {
@@ -216,6 +233,16 @@ colorSwatches.forEach((swatch) => {
     swatch.classList.add("active");
     game.setPlayerColor(swatch.dataset.color);
   });
+});
+
+createGameBtn?.addEventListener("click", () => {
+  alert("Creating new game...");
+  // TODO: Implement actual game creation logic
+});
+
+joinGameBtn?.addEventListener("click", () => {
+  alert("Joining game...");
+  // TODO: Implement actual join logic
 });
 
 game.setPauseChangeHandler((isPaused) => {

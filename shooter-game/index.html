@@ -22,13 +22,16 @@
             </div>
             <h1 class="intro-title">Survivor Shooter</h1>
             <p class="intro-subtitle">
-              Drop into a neon battlefield, dodge incoming fire, and chain
-              score as the arena gets more dangerous every wave.
+              Drop into a neon battlefield, dodge incoming fire, and chain score
+              as the arena gets more dangerous every wave.
             </p>
 
             <div class="intro-actions">
               <button id="start-btn" class="intro-btn intro-btn-primary">
                 Play Now
+              </button>
+              <button id="multiplayer-btn" class="intro-btn">
+                Multiplayer
               </button>
               <button id="settings-btn" class="intro-btn">Settings</button>
               <button id="maps-btn" class="intro-btn">Maps</button>
@@ -169,12 +172,32 @@
           </button>
         </div>
 
+        <div class="intro-card intro-panel hidden" id="lobby-panel">
+          <p class="intro-kicker">Multiplayer Arena</p>
+          <h2>Lobby</h2>
+          <p class="intro-subtitle intro-subtitle-compact">
+            Create your own game session or join an existing one.
+          </p>
+          <div class="lobby-content">
+            <div class="intro-actions">
+              <button id="create-game-btn" class="intro-btn intro-btn-primary">
+                Create Game
+              </button>
+              <button id="join-game-btn" class="intro-btn intro-btn-primary">
+                Join Game
+              </button>
+            </div>
+          </div>
+          <button id="lobby-back-btn" class="intro-btn intro-btn-ghost">
+            Back
+          </button>
+        </div>
+
         <div class="intro-card intro-panel hidden" id="pause-panel">
           <p class="intro-kicker">Combat Frozen</p>
           <h2>Pause Menu</h2>
           <p class="intro-subtitle intro-subtitle-compact">
-            Reposition, adjust your setup, or jump straight back into the
-            arena.
+            Reposition, adjust your setup, or jump straight back into the arena.
           </p>
           <div class="pause-snapshot">
             <div>

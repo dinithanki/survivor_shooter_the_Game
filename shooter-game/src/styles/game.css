@@ -630,6 +630,17 @@ canvas {
   }
 }
 
+/* Lobby Styles */
+#lobby-panel {
+  width: min(560px, 96%);
+}
+
+.lobby-content {
+  display: grid;
+  gap: 20px;
+  margin: 16px 0;
+}
+
 @keyframes glow {
   0%,
   100% {
