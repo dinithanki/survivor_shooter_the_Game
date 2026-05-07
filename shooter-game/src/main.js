@@ -82,6 +82,31 @@ function showPausePanel() {
   introScreen?.classList.remove("hidden");
   setVisiblePanel(pausePanel);
   void playMenuMusic();
+
+  // ── Live stats ──────────────────────────────────────────
+  const scoreEl  = document.getElementById("pm-score-val");
+  const waveEl   = document.getElementById("pm-wave-val");
+  const healthEl = document.getElementById("pm-health-val");
+
+  // Score — show actual value, no arbitrary padding
+  if (scoreEl) scoreEl.textContent = game.score ?? 0;
+
+  // Wave
+  if (waveEl) waveEl.textContent = game.waveSystem?.currentWave ?? 1;
+
+  // Health — show "72%" and colour-code
+  if (healthEl) {
+    const player = game.player;
+    if (player) {
+      const pct = Math.ceil((player.hp / player.maxHp) * 100);
+      healthEl.textContent = pct + "%";
+      // green > 50%, yellow > 25%, red otherwise
+      healthEl.style.color = pct > 50 ? "#00ffaa" : pct > 25 ? "#ffd86b" : "#ff3d5a";
+    } else {
+      healthEl.textContent = "—";
+      healthEl.style.color = "";
+    }
+  }
 }
 
 function showMapsPanel() {

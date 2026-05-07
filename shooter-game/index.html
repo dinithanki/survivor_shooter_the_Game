@@ -3,7 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Survivor Shooter — a fast-paced neon arcade shooter. Dodge, fire, and survive endless waves." />
     <title>Survivor Shooter | Neon Arena</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/src/styles/game.css" />
   </head>
 
@@ -14,7 +18,7 @@
       <div id="intro-screen" class="intro-screen">
         <div class="intro-card" id="intro-main-panel">
           <div class="intro-hero-copy">
-            <p class="intro-kicker">Arcade Survival</p>
+            <p class="intro-kicker">Neon Arena · Arcade Survival</p>
             <div class="intro-chip-row">
               <span class="intro-chip">Endless Waves</span>
               <span class="intro-chip">Power-Ups</span>
@@ -169,38 +173,95 @@
           </button>
         </div>
 
-        <div class="intro-card intro-panel hidden" id="pause-panel">
-          <p class="intro-kicker">Combat Frozen</p>
-          <h2>Pause Menu</h2>
-          <p class="intro-subtitle intro-subtitle-compact">
-            Reposition, adjust your setup, or jump straight back into the
-            arena.
-          </p>
-          <div class="pause-snapshot">
-            <div>
-              <span>State</span>
-              <strong>Paused</strong>
+        <div class="pause-card hidden" id="pause-panel">
+
+          <!-- Header -->
+          <div class="pm-header">
+            <div class="pm-status-dot"></div>
+            <span class="pm-eyebrow">Game Paused</span>
+            <div class="pm-status-dot pm-dot-right"></div>
+          </div>
+
+          <h2 class="pm-title">MISSION<br><span>ON HOLD</span></h2>
+
+          <!-- Live stat chips -->
+          <div class="pm-stats">
+            <div class="pm-stat">
+              <svg class="pm-stat-icon" viewBox="0 0 20 20" fill="none">
+                <path d="M10 2l2.4 4.8 5.3.8-3.85 3.75.9 5.25L10 14.1l-4.75 2.5.9-5.25L2.3 7.6l5.3-.8L10 2z" fill="currentColor"/>
+              </svg>
+              <span class="pm-stat-label">Score</span>
+              <strong class="pm-stat-val" id="pm-score-val">—</strong>
             </div>
-            <div>
-              <span>Control</span>
-              <strong>P resumes</strong>
+            <div class="pm-stat-divider"></div>
+            <div class="pm-stat">
+              <svg class="pm-stat-icon" viewBox="0 0 20 20" fill="none">
+                <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M10 6v4l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              <span class="pm-stat-label">Wave</span>
+              <strong class="pm-stat-val" id="pm-wave-val">—</strong>
             </div>
-            <div>
-              <span>Menu</span>
-              <strong>Settings / Briefing / Main</strong>
+            <div class="pm-stat-divider"></div>
+            <div class="pm-stat">
+              <svg class="pm-stat-icon" viewBox="0 0 20 20" fill="none">
+                <path d="M10 3C6.13 3 3 6.13 3 10s3.13 7 7 7 7-3.13 7-7-3.13-7-7-7zm1 11H9v-5h2v5zm0-7H9V5h2v2z" fill="currentColor"/>
+              </svg>
+              <span class="pm-stat-label">Health</span>
+              <strong class="pm-stat-val pm-health" id="pm-health-val">—</strong>
             </div>
           </div>
-          <div class="intro-actions">
-            <button id="resume-btn" class="intro-btn intro-btn-primary">
+
+          <!-- Divider -->
+          <div class="pm-divider"></div>
+
+          <!-- Nav buttons -->
+          <nav class="pm-nav">
+            <button id="resume-btn" class="pm-btn pm-btn-primary">
+              <svg viewBox="0 0 20 20" fill="none">
+                <polygon points="7,4 17,10 7,16" fill="currentColor"/>
+              </svg>
               Return to Battle
+              <span class="pm-btn-key">P</span>
             </button>
-            <button id="pause-settings-btn" class="intro-btn">Settings</button>
-            <button id="pause-maps-btn" class="intro-btn">Maps</button>
-            <button id="pause-howto-btn" class="intro-btn">How To Play</button>
-            <button id="pause-main-btn" class="intro-btn intro-btn-ghost">
-              Main Menu
+            <div class="pm-nav-row">
+              <button id="pause-settings-btn" class="pm-btn pm-btn-ghost">
+                <svg viewBox="0 0 20 20" fill="none">
+                  <circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/>
+                  <path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.22 4.22l1.42 1.42M14.36 14.36l1.42 1.42M4.22 15.78l1.42-1.42M14.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                Settings
+              </button>
+              <button id="pause-maps-btn" class="pm-btn pm-btn-ghost">
+                <svg viewBox="0 0 20 20" fill="none">
+                  <path d="M3 5l5-2 4 2 5-2v12l-5 2-4-2-5 2V5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                  <path d="M8 3v12M12 5v12" stroke="currentColor" stroke-width="1.5"/>
+                </svg>
+                Maps
+              </button>
+              <button id="pause-howto-btn" class="pm-btn pm-btn-ghost">
+                <svg viewBox="0 0 20 20" fill="none">
+                  <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/>
+                  <path d="M10 13v-1c0-1.5 3-2 3-4a3 3 0 00-6 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  <circle cx="10" cy="15" r="0.7" fill="currentColor"/>
+                </svg>
+                How To Play
+              </button>
+            </div>
+            <button id="pause-main-btn" class="pm-btn pm-btn-danger">
+              <svg viewBox="0 0 20 20" fill="none">
+                <path d="M9 3H5a2 2 0 00-2 2v10a2 2 0 002 2h4M13 7l4 3-4 3M7 10h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Quit to Main Menu
             </button>
+          </nav>
+
+          <!-- Footer shortcut bar -->
+          <div class="pm-footer">
+            <span><kbd>P</kbd> Resume</span>
+            <span><kbd>R</kbd> Restart</span>
           </div>
+
         </div>
       </div>
 
@@ -226,20 +287,7 @@
         </div>
       </div>
 
-      <div class="stats">
-        <div class="stat-item">
-          <span class="stat-label">Current Game</span>
-          <span class="stat-value" id="score">Score: 0</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-label">Wave</span>
-          <span class="stat-value" id="wave">Wave: 1</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-label">Health</span>
-          <span class="stat-value" id="health">100/100</span>
-        </div>
-      </div>
+
     </div>
 
     <script type="module" src="/src/main.js"></script>
