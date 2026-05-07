@@ -265,6 +265,54 @@
         </div>
       </div>
 
+      <!-- ══ GAME OVER SCREEN ══════════════════════════════════ -->
+      <div id="game-over-screen" class="go-screen hidden">
+        <div class="go-card">
+
+          <p class="go-eyebrow">Mission Failed</p>
+          <h2 class="go-title">GAME<br><span>OVER</span></h2>
+
+          <!-- Stats row -->
+          <div class="go-stats">
+            <div class="go-stat">
+              <span class="go-stat-label">Final Score</span>
+              <strong class="go-stat-val go-score" id="go-score">0</strong>
+            </div>
+            <div class="go-stat-divider"></div>
+            <div class="go-stat">
+              <span class="go-stat-label">Time Played</span>
+              <strong class="go-stat-val" id="go-time">00:00</strong>
+            </div>
+            <div class="go-stat-divider"></div>
+            <div class="go-stat">
+              <span class="go-stat-label">Wave Reached</span>
+              <strong class="go-stat-val go-wave" id="go-wave">1</strong>
+            </div>
+          </div>
+
+          <div class="go-divider"></div>
+
+          <!-- Actions -->
+          <div class="go-actions">
+            <button id="go-restart-btn" class="pm-btn pm-btn-primary go-action-btn">
+              <svg viewBox="0 0 20 20" fill="none">
+                <path d="M4 10a6 6 0 1 0 1.1-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <path d="M4 5v5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Play Again
+              <span class="pm-btn-key">R</span>
+            </button>
+            <button id="go-menu-btn" class="pm-btn pm-btn-ghost go-action-btn">
+              <svg viewBox="0 0 20 20" fill="none">
+                <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+              Main Menu
+            </button>
+          </div>
+
+        </div>
+      </div>
+
       <div class="controls">
         <div class="control-item">
           <span class="key">W</span>
@@ -281,12 +329,37 @@
           <span class="key">P</span>
           <span>Pause/Resume</span>
         </div>
-        <div class="control-item">
-          <span class="key">R</span>
-          <span>Restart</span>
-        </div>
       </div>
 
+
+      <!-- ══ RESTART CONFIRM POPUP ════════════════════════════ -->
+      <div id="restart-confirm" class="rc-backdrop hidden">
+        <div class="rc-card">
+          <div class="rc-icon">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h3 class="rc-title">Restart Match?</h3>
+          <p class="rc-body">Your current progress and score will be lost.<br>This cannot be undone.</p>
+          <div class="rc-actions">
+            <button id="rc-yes-btn" class="pm-btn pm-btn-primary rc-btn">
+              <svg viewBox="0 0 20 20" fill="none">
+                <path d="M4 10a6 6 0 1 0 1.1-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <path d="M4 5v5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Yes, Restart
+            </button>
+            <button id="rc-no-btn" class="pm-btn pm-btn-ghost rc-btn">
+              <svg viewBox="0 0 20 20" fill="none">
+                <path d="M15 5L5 15M5 5l10 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
 
     </div>
 

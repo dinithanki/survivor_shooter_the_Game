@@ -73,6 +73,7 @@ function setVisiblePanel(panel) {
 
 function showIntroMain() {
   menuContext = "intro";
+  introScreen?.classList.remove("hidden");  // re-show the overlay container
   setVisiblePanel(introMainPanel);
   void playMenuMusic();
 }
@@ -255,19 +256,117 @@ game.setPauseChangeHandler((isPaused) => {
   }
 });
 
+// ── Game Over Screen ──────────────────────────────────────────
+const gameOverScreen = document.getElementById("game-over-screen");
+const goScoreEl      = document.getElementById("go-score");
+const goTimeEl       = document.getElementById("go-time");
+const goWaveEl       = document.getElementById("go-wave");
+const goRestartBtn   = document.getElementById("go-restart-btn");
+const goMenuBtn      = document.getElementById("go-menu-btn");
+
+let gameOverShown = false;  // guard so we only show once per death
+
+function showGameOver() {
+  if (gameOverShown) return;
+  gameOverShown = true;
+
+  // Populate stats
+  if (goScoreEl) goScoreEl.textContent = game.score ?? 0;
+  if (goTimeEl)  goTimeEl.textContent  = game.getPlayTimeFormatted?.() ?? "00:00";
+  if (goWaveEl)  goWaveEl.textContent  = game.waveSystem?.currentWave ?? 1;
+
+  gameOverScreen?.classList.remove("hidden");
+  void audioManager.enterMenuMode?.();
+}
+
+function hideGameOver() {
+  gameOverShown = false;
+  gameOverScreen?.classList.add("hidden");
+}
+
+game.setGameOverHandler(showGameOver);
+
+// Play Again button + R key
+function doRestart() {
+  hideGameOver();
+  introScreen?.classList.add("hidden");
+  void audioManager.enterGameMode?.();
+  game.restart();
+  game.hasStarted = true;
+}
+
+goRestartBtn?.addEventListener("click", doRestart);
+
+// ── Restart Confirm Popup ─────────────────────────────────────
+const rcBackdrop = document.getElementById("restart-confirm");
+const rcYesBtn   = document.getElementById("rc-yes-btn");
+const rcNoBtn    = document.getElementById("rc-no-btn");
+
+function showRestartConfirm() {
+  // Pause the game while the popup is open
+  if (!game.isPaused && game.hasStarted && !game.isGameOver) {
+    game.togglePause();
+  }
+  rcBackdrop?.classList.remove("hidden");
+}
+
+function hideRestartConfirm() {
+  rcBackdrop?.classList.add("hidden");
+}
+
+rcYesBtn?.addEventListener("click", () => {
+  hideRestartConfirm();
+  doRestart();
+});
+
+rcNoBtn?.addEventListener("click", () => {
+  hideRestartConfirm();
+  // Un-pause if we paused to show the confirm
+  if (game.isPaused && game.hasStarted && !game.isGameOver) {
+    game.togglePause();
+  }
+});
+
+// R key handling
+document.addEventListener("keydown", (e) => {
+  const key = e.key.toLowerCase();
+
+  // If confirm popup is open: Enter = yes, Escape = cancel
+  if (!rcBackdrop?.classList.contains("hidden")) {
+    if (key === "enter") { rcYesBtn?.click(); }
+    if (key === "escape") { rcNoBtn?.click(); }
+    return;
+  }
+
+  // Game over: R restarts immediately (no confirm needed)
+  if (key === "r" && game.isGameOver) {
+    doRestart();
+    return;
+  }
+
+  // In-game / pause menu: R shows confirm popup
+  if (key === "r" && game.hasStarted && !game.isGameOver) {
+    showRestartConfirm();
+  }
+});
+
+// Main Menu button
+goMenuBtn?.addEventListener("click", () => {
+  hideGameOver();
+  game.goToMainMenu();
+  showIntroMain();
+});
+
+// ── Audio priming ─────────────────────────────────────────────
 document.addEventListener(
   "pointerdown",
-  () => {
-    void primeMenuAudioOnce();
-  },
+  () => { void primeMenuAudioOnce(); },
   { once: true },
 );
 
 document.addEventListener(
   "keydown",
-  () => {
-    void primeMenuAudioOnce();
-  },
+  () => { void primeMenuAudioOnce(); },
   { once: true },
 );
 

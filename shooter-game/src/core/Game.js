@@ -69,9 +69,11 @@ export default class Game {
     this.settings = {
       playerColor: "dodgerblue",
     };
-    this.onPauseChange = null;
-    this.mapPresets = MAP_PRESETS;
-    this.mapPresetIndex = 0;
+    this.onPauseChange   = null;
+    this.onGameOver      = null;   // callback for HTML game over screen
+    this.mapPresets      = MAP_PRESETS;
+    this.mapPresetIndex  = 0;
+    this.playTime        = 0;      // seconds elapsed since game started
 
     // Game systems
     this.collisionSystem = new CollisionSystem(this);
@@ -97,19 +99,9 @@ export default class Game {
 
     // Keyboard controls
     window.addEventListener("keydown", (e) => {
-      if (!this.hasStarted) {
-        return;
-      }
-
-      if (e.key.toLowerCase() === "p") {
-        this.togglePause();
-      }
-      if (e.key.toLowerCase() === "r" && this.isGameOver) {
-        this.restart();
-      }
-      if (e.key.toLowerCase() === "m") {
-        this.menu.open();
-      }
+      if (!this.hasStarted) return;
+      if (e.key.toLowerCase() === "p") this.togglePause();
+      if (e.key.toLowerCase() === "m") this.menu.open();
     });
   }
 
@@ -192,6 +184,18 @@ export default class Game {
     this.onPauseChange = handler;
   }
 
+  setGameOverHandler(handler) {
+    this.onGameOver = handler;
+  }
+
+  /** Format seconds → "mm:ss" */
+  getPlayTimeFormatted() {
+    const total = Math.floor(this.playTime);
+    const m = Math.floor(total / 60).toString().padStart(2, "0");
+    const s = (total % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  }
+
   gameLoop = () => {
     this.update();
     this.draw();
@@ -202,6 +206,10 @@ export default class Game {
     // Update time first
     this.time.update();
     const dt = this.time.deltaTime;
+
+    if (!this.isPaused && !this.isGameOver && this.hasStarted) {
+      this.playTime += dt;
+    }
 
     // Always update short-lived visual timers (like death flash)
     if (this.deathFlashTimer > 0) {
@@ -278,6 +286,7 @@ export default class Game {
 
     if (this.isGameOver) {
       this.overlay.show("gameOver");
+      if (this.onGameOver) this.onGameOver();   // notify HTML layer (once guard inside)
     } else if (this.isPaused) {
       this.overlay.show("pause");
     } else {
@@ -317,6 +326,7 @@ export default class Game {
     this.score = 0;
     this.isPaused = false;
     this.isGameOver = false;
+    this.playTime = 0;
     this.difficultyTier = -1;
     this.difficultyScale = {
       playerMaxHp: 100,
