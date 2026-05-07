@@ -311,8 +311,10 @@ export default class Game {
   }
 
   goToMainMenu() {
-    this.isPaused = false;
-    this.hasStarted = false;
+    this.isPaused    = false;
+    this.hasStarted  = false;
+    this.isGameOver  = false;   // stop the draw loop from re-triggering onGameOver
+    this.onGameOver  = null;    // clear the callback so it never fires again until next game
   }
 
   restart() {

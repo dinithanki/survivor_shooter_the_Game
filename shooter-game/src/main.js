@@ -224,6 +224,12 @@ startBtn?.addEventListener("click", async () => {
 
   introScreen?.classList.add("hidden");
   await audioManager.enterGameMode();
+
+  // Re-register handler in case player returned from main menu
+  // (goToMainMenu clears onGameOver to stop the draw loop re-triggering it)
+  gameOverShown = false;
+  game.setGameOverHandler(showGameOver);
+
   game.beginGame();
 });
 
